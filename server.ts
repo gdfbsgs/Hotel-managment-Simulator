@@ -2,8 +2,28 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+import { GoogleGenAI, Type } from "@google/genai";
 
 dotenv.config();
+
+let aiClient: GoogleGenAI | null = null;
+function getGenAI(): GoogleGenAI {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY environment variable is required. Please set it in Settings > Secrets.");
+    }
+    aiClient = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
+  }
+  return aiClient;
+}
 
 async function startServer() {
   const app = express();
@@ -14,24 +34,15 @@ async function startServer() {
   app.post("/api/generate-hotel", async (req, res) => {
     try {
       const { prompt } = req.body;
+      const ai = getGenAI();
       
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY || "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"}`,
-          "HTTP-Referer": "http://localhost:3000",
-          "X-Title": "Hotel Generator",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "meta-llama/llama-3.3-70b-instruct:free",
-          response_format: { type: "json_object" },
-          messages: [
-            {
-              role: "system",
-              content: `You are an expert hotel architect.
-Generate a 2D floor plan for a hotel on a 20x16 grid (20 columns width, 16 rows height).
-Use ONLY these exact characters for the grid strings:
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt ? `Design a hotel layout based on: ${prompt}` : "Design a hotel layout.",
+        config: {
+          systemInstruction: `You are an expert hotel architect.
+Generate a multi-floor 2D floor plan for a hotel based on the user's prompt. Each floor level has a 20x16 grid (20 columns width, 16 rows height).
+Each cell in the grid represents a tile type. Use ONLY these exact characters:
 ' ' (space) = empty
 '.' = floor
 '#' = wall
@@ -44,31 +55,61 @@ Use ONLY these exact characters for the grid strings:
 'P' = plant
 'T' = table
 'E' = elevator
+'X' = emergency stairs
 
-Return exactly 16 strings, each exactly 20 characters long. Represent a functional floor plan. Wrap the exterior with walls ('#'), place an entrance with doors ('D'), reception ('R') near entrance, elevators ('E'), and rooms (containing 'B' and 'b').
-
-You MUST return a valid JSON object with this EXACT structure:
-{
-  "grid": ["...", "...", ... 16 strings total],
-  "labels": [
-    { "x": 2, "y": 2, "text": "Room 1" }
-  ]
-}`
+Important rules for layout:
+- If the user specifies a number of floors (e.g. "a 10 floor hotel", "3 floors"), generate exactly that number of floors (up to 10 floors). If they do not specify, default to generating 1 or 2 floors.
+- The ground floor (level 0) should typically contain the reception desk ('R'), lobby area, tables, plants, elevators ('E'), and an exit door leading from the emergency stairs ('X') to the outside.
+- Upper floors (level 1 and above) should contain hotel rooms (each with a bed 'B', bathroom 'b', door 'D', partitioned by walls '#'), elevators ('E'), and emergency stairs ('X').
+- Hallway Requirement: Each floor MUST contain a clear, continuous hallway (built of '.' floor tiles) that directly connects the entrance door of every room ('D') to both the elevators ('E') and the emergency stairs ('X'). 
+- All floor plans must be closed with outer walls ('#'), but with a few windows ('W') and at least one entrance/exit containing doors ('D') on the ground floor.
+- CRITICAL Alignment: Elevators ('E') AND emergency stairs ('X') MUST line up at the exact same (X, Y) coordinates across all floors where they exist so guests can vertically transition or evacuate safely between floors. For example, if there is an elevator at (3, 5) and stairs at (17, 12) on level 0, they must be at those exact same coordinates on level 1, level 2, etc.
+- Each floor's grid must contain exactly 16 strings, and each string must be exactly 20 characters long. Any deviation in row or column count will break the application.`,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              floors: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    level: { type: Type.INTEGER, description: "The level index of the floor (starting at 0 for ground floor)" },
+                    name: { type: Type.STRING, description: "Name of the floor (e.g., 'Ground Floor', 'Level 1', 'Level 2')" },
+                    grid: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                      description: "Array of exactly 16 strings. Each string must be exactly 20 characters long representing one row of the grid."
+                    },
+                    labels: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          x: { type: Type.INTEGER, description: "X coordinate of the label text (0 to 19)" },
+                          y: { type: Type.INTEGER, description: "Y coordinate of the label text (0 to 15)" },
+                          text: { type: Type.STRING, description: "Label text describing the area" }
+                        },
+                        required: ["x", "y", "text"]
+                      },
+                      description: "List of labels for this floor."
+                    }
+                  },
+                  required: ["level", "name", "grid", "labels"]
+                },
+                description: "List of hotel floors. Generate exactly the number of floors requested by the user, up to 10 floors max."
+              }
             },
-            {
-              role: "user",
-              content: prompt ? `Design a hotel layout based on: ${prompt}` : "Design a hotel layout."
-            }
-          ]
-        })
+            required: ["floors"]
+          }
+        }
       });
 
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error.message || "OpenRouter API error");
+      if (!response.text) {
+        throw new Error("No response content generated by the AI model.");
       }
-      
-      const parsed = JSON.parse(data.choices[0].message.content);
+
+      const parsed = JSON.parse(response.text.trim());
       res.json(parsed);
     } catch (err: any) {
       console.error(err);

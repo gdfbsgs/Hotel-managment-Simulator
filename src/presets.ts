@@ -12,7 +12,8 @@ const charToTile: Record<string, TileType> = {
   'S': 'staff',
   'P': 'plant',
   'T': 'table',
-  'E': 'elevator'
+  'E': 'elevator',
+  'X': 'stairs'
 };
 
 const GRID_SIZE = 20;
@@ -48,7 +49,7 @@ export const PRESETS: Record<string, Floor[]> = {
         'W.........#........#',
         '#.........#........#',
         '#P........#P...P...#',
-        '####################',
+        '#########D##########',
         '      EE            ',
         '      EE            ',
       ]),

@@ -1,4 +1,4 @@
-export type TileType = 'empty' | 'floor' | 'wall' | 'door' | 'window' | 'bed' | 'reception' | 'plant' | 'table' | 'elevator' | 'bathroom' | 'staff';
+export type TileType = 'empty' | 'floor' | 'wall' | 'door' | 'window' | 'bed' | 'reception' | 'plant' | 'table' | 'elevator' | 'bathroom' | 'staff' | 'stairs';
 
 export interface Label {
   id: string;
@@ -14,10 +14,30 @@ export interface Floor {
   labels?: Label[];
 }
 
-export type ViewMode = '2D' | '3D' | 'Walk';
-export type AppMode = 'Design' | 'Management' | 'Analytics';
+export interface FloorTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  grid: TileType[][];
+  labels?: Label[];
+  isBuiltIn?: boolean;
+}
 
-export type StaffTask = 'Idle' | 'Clean Room' | 'Maintain Elevator' | 'Check-in Guests' | 'Patrol';
+export interface Milestone {
+  id: string;
+  title: string;
+  description: string;
+  targetType: 'floors' | 'guests' | 'money' | 'staff';
+  targetValue: number;
+  unlocked: boolean;
+  unlockedAt?: string;
+  rarity?: 'bronze' | 'silver' | 'gold';
+}
+
+export type ViewMode = '2D' | '3D' | 'Walk';
+export type AppMode = 'Design' | 'Management' | 'Analytics' | 'Chain';
+
+export type StaffTask = 'Idle' | 'Clean Room' | 'Maintain Elevator' | 'Check-in Guests' | 'Patrol' | 'Service VIP';
 
 export interface StaffNPC {
   id: string;
@@ -27,7 +47,7 @@ export interface StaffNPC {
   currentTask?: StaffTask;
 }
 
-export type GuestState = 'wandering' | 'checking-in' | 'going-to-room' | 'in-room' | 'checking-out' | 'leaving';
+export type GuestState = 'wandering' | 'checking-in' | 'going-to-elevator' | 'going-to-room' | 'in-room' | 'checking-out' | 'going-to-elevator-checkout' | 'leaving';
 
 export interface GuestNPC {
   id: string;
@@ -41,7 +61,23 @@ export interface GuestNPC {
   y: number;
   targetX?: number;
   targetY?: number;
+  finalTargetX?: number;
+  finalTargetY?: number;
+  finalFloorIndex?: number;
   floorIndex: number;
+  isVip?: boolean;
+  vipNeed?: 'champagne' | 'valet' | 'suite' | 'spa' | 'none';
+  vipSatisfaction?: number; // 0 to 100
+  vipAssignedStaff?: string; // Staff ID currently servicing them
+  satisfaction?: number; // For standard guests (0-100)
+  feedback?: {
+    text: string;
+    emoji: string;
+    type: 'happy' | 'neutral' | 'angry';
+    visibleUntil: number; // Timestamp or game-ticks
+  };
+  roomCategoryId?: string;
+  enrolledInBonusProgram?: boolean;
 }
 
 export interface RoomRates {
@@ -49,11 +85,60 @@ export interface RoomRates {
   suite: number;
 }
 
+export interface Brand {
+  id: string;
+  name: string;
+  description: string;
+  vipMultiplier: number; // multiplier for VIP satisfaction gains and tips (e.g. 1.5)
+  bedMultiplier: number; // cost/revenue multiplier for placing standard/suite rooms (e.g. 1.2)
+  styleColor: string; // CSS color classes for theme accents
+  vipSpawnRate: number; // frequency modifier of VIP guests spawning (e.g. 0.4 for premium brands)
+  isCustom?: boolean; // whether it was created by the user
+  icon: string;
+  color: string;
+}
+
+export interface RoomCategory {
+  id: string;
+  name: string;
+  price: number;
+  icon: string;
+  requiredTiles: TileType[];
+  description: string;
+  presetTemplateId?: string; // linked layout template id for easy preset applying
+}
+
+export interface BonusProgram {
+  id: string;
+  name: string;
+  description: string;
+  costToActivate: number;
+  privileges: string[]; // e.g. ['lateCheckout', 'organicVibe']
+  isActive: boolean;
+  enrollmentFee: number;
+}
+
 export interface HotelData {
+  id: string;
+  name: string;
+  brandId: string;
   floors: Floor[];
   money: number;
   staff: StaffNPC[];
   guests: GuestNPC[];
-  name?: string;
-  roomRates?: RoomRates;
+  roomRates: RoomRates;
+  roomCategories?: RoomCategory[];
+  bonusPrograms?: BonusProgram[];
+  activeBonusProgramId?: string | null;
+  totalGuestsServed: number;
+  milestones: Milestone[];
+}
+
+export interface HotelChain {
+  name: string;
+  hotels: HotelData[];
+  activeHotelId: string;
+  customBrands?: Brand[];
+  roomCategories?: RoomCategory[];
+  bonusPrograms?: BonusProgram[];
 }
