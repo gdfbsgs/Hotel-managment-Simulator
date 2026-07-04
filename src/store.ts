@@ -175,6 +175,54 @@ export const DEFAULT_BONUS_PROGRAMS: BonusProgram[] = [
   }
 ];
 
+export function findPath(grid: TileType[][], startX: number, startY: number, targetX: number, targetY: number): { x: number, y: number }[] | null {
+  const height = grid.length;
+  const width = grid[0].length;
+  
+  const startX_round = Math.max(0, Math.min(width - 1, Math.round(startX)));
+  const startY_round = Math.max(0, Math.min(height - 1, Math.round(startY)));
+  const targetX_round = Math.max(0, Math.min(width - 1, Math.round(targetX)));
+  const targetY_round = Math.max(0, Math.min(height - 1, Math.round(targetY)));
+  
+  if (startX_round === targetX_round && startY_round === targetY_round) {
+    return [{ x: targetX_round, y: targetY_round }];
+  }
+  
+  const queue: [number, number, { x: number, y: number }[]][] = [[startX_round, startY_round, []]];
+  const visited = Array(height).fill(0).map(() => Array(width).fill(false));
+  visited[startY_round][startX_round] = true;
+  
+  const dirs = [
+    { dx: 0, dy: -1 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 }
+  ];
+  
+  while (queue.length > 0) {
+    const [cx, cy, path] = queue.shift()!;
+    
+    if (cx === targetX_round && cy === targetY_round) {
+      return path;
+    }
+    
+    for (const { dx, dy } of dirs) {
+      const nx = cx + dx;
+      const ny = cy + dy;
+      
+      if (nx >= 0 && nx < width && ny >= 0 && ny < height && !visited[ny][nx]) {
+        const tile = grid[ny][nx];
+        const isWalkable = (tile !== 'wall' && tile !== 'empty') || (nx === targetX_round && ny === targetY_round);
+        if (isWalkable) {
+          visited[ny][nx] = true;
+          queue.push([nx, ny, [...path, { x: nx, y: ny }]]);
+        }
+      }
+    }
+  }
+  return null;
+}
+
 export const evaluateFloorRoomCategory = (floor: Floor, categories: RoomCategory[]): RoomCategory => {
   if (!floor) return categories[0];
   const tileCounts: Record<string, number> = {};
@@ -320,6 +368,18 @@ interface HotelStore {
   createBonusProgram: (program: BonusProgram) => void;
   activateBonusProgram: (id: string | null) => void;
   deleteBonusProgram: (id: string) => void;
+
+  // Clickable doors, elevator destinations, and graphics/spectator options
+  openDoors: Record<string, boolean>;
+  toggleDoor: (floorIndex: number, x: number, y: number) => void;
+  graphicsQuality: 'low' | 'medium' | 'high' | 'ultra';
+  setGraphicsQuality: (quality: 'low' | 'medium' | 'high' | 'ultra') => void;
+  spectatorMode: boolean;
+  setSpectatorMode: (enabled: boolean) => void;
+
+  isElevatorMoving: boolean;
+  elevatorTargetFloor: number | null;
+  callElevator: (targetFloor: number) => void;
 }
 
 export const useHotelStore = create<HotelStore>((set, get) => ({
@@ -344,6 +404,12 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
   milestones: getInitialMilestones(),
   activeMilestoneNotification: null,
   dismissMilestoneNotification: () => set({ activeMilestoneNotification: null }),
+
+  openDoors: {},
+  graphicsQuality: 'high',
+  spectatorMode: false,
+  isElevatorMoving: false,
+  elevatorTargetFloor: null,
 
   chainName: 'Grand Horizon Hotels',
   hotels: [
@@ -1043,16 +1109,46 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
         }
       }
       
-      // Move towards target
+      // Move towards target using pathfinding AI
       if (g.targetX !== undefined && g.targetY !== undefined) {
-        const dx = g.targetX - g.x;
-        const dy = g.targetY - g.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
+        const lastNode = g.path && g.path.length > 0 ? g.path[g.path.length - 1] : null;
+        const needsNewPath = !g.path || g.path.length === 0 || !lastNode || lastNode.x !== g.targetX || lastNode.y !== g.targetY;
         
-        if (dist > 0.5) {
-          g.x += (dx / dist) * 0.5;
-          g.y += (dy / dist) * 0.5;
-        } else {
+        if (needsNewPath) {
+          const grid = state.floors[g.floorIndex]?.grid;
+          if (grid) {
+            const calculatedPath = findPath(grid, g.x, g.y, g.targetX, g.targetY);
+            g.path = calculatedPath || [{ x: g.targetX, y: g.targetY }];
+          } else {
+            g.path = [{ x: g.targetX, y: g.targetY }];
+          }
+        }
+        
+        if (g.path && g.path.length > 0) {
+          const nextStep = g.path[0];
+          const dx = nextStep.x - g.x;
+          const dy = nextStep.y - g.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist > 0.15) {
+            g.x += (dx / dist) * 0.5;
+            g.y += (dy / dist) * 0.5;
+          } else {
+            g.x = nextStep.x;
+            g.y = nextStep.y;
+            g.path.shift();
+          }
+        }
+        
+        const finalDx = g.targetX - g.x;
+        const finalDy = g.targetY - g.y;
+        const finalDist = Math.sqrt(finalDx * finalDx + finalDy * finalDy);
+        
+        if (finalDist <= 0.15) {
+          g.x = g.targetX;
+          g.y = g.targetY;
+          g.path = [];
+          
           // Reached target
           if (g.state === 'checking-in') {
             // Find a bed
@@ -1254,11 +1350,170 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
     // Remove guests that are done
     newGuests = newGuests.filter(g => (g.state as any) !== 'done');
 
+    // Process Staff NPC movement and target updates
+    const updatedStaff = state.staff.map(s => {
+      const npc = { ...s };
+      
+      // Initialize position if not set
+      if (npc.x === undefined || npc.y === undefined || npc.floorIndex === undefined) {
+        npc.x = 2 + Math.floor(Math.random() * 6);
+        npc.y = 3;
+        npc.floorIndex = 0;
+      }
+      
+      // If idle or has no target, assign a target based on their role
+      let targetCoords: { x: number, y: number, f: number } | null = null;
+      
+      if (npc.targetX === undefined || npc.targetY === undefined) {
+        if (npc.role === 'receptionist') {
+          // Find reception desks
+          const receptionPoints: { x: number, y: number, f: number }[] = [];
+          state.floors.forEach((floor, f) => {
+            floor.grid.forEach((row, y) => {
+              row.forEach((cell, x) => {
+                if (cell === 'reception') {
+                  receptionPoints.push({ x, y, f });
+                }
+              });
+            });
+          });
+          
+          if (receptionPoints.length > 0) {
+            // Target first reception desk
+            const pt = receptionPoints[Math.floor(Math.random() * receptionPoints.length)];
+            targetCoords = { x: pt.x, y: pt.y + 1, f: pt.f }; // stand right in front of reception desk
+          } else {
+            targetCoords = { x: 10, y: 15, f: 0 };
+          }
+        } else if (npc.role === 'cleaner') {
+          // Find bed tiles (rooms) that need cleaning/visiting
+          const roomPoints: { x: number, y: number, f: number }[] = [];
+          state.floors.forEach((floor, f) => {
+            floor.grid.forEach((row, y) => {
+              row.forEach((cell, x) => {
+                if (cell === 'bed' || cell === 'bathroom') {
+                  roomPoints.push({ x, y, f });
+                }
+              });
+            });
+          });
+          
+          if (roomPoints.length > 0) {
+            const pt = roomPoints[Math.floor(Math.random() * roomPoints.length)];
+            targetCoords = { x: pt.x, y: pt.y, f: pt.f };
+          } else {
+            targetCoords = { x: 5 + Math.floor(Math.random() * 10), y: 5 + Math.floor(Math.random() * 10), f: 0 };
+          }
+        } else { // manager
+          // Patrol general floors
+          const patrolPoints: { x: number, y: number, f: number }[] = [];
+          state.floors.forEach((floor, f) => {
+            floor.grid.forEach((row, y) => {
+              row.forEach((cell, x) => {
+                if (cell === 'floor' || cell === 'elevator') {
+                  patrolPoints.push({ x, y, f });
+                }
+              });
+            });
+          });
+          
+          if (patrolPoints.length > 0) {
+            const pt = patrolPoints[Math.floor(Math.random() * patrolPoints.length)];
+            targetCoords = { x: pt.x, y: pt.y, f: pt.f };
+          } else {
+            targetCoords = { x: 10, y: 10, f: 0 };
+          }
+        }
+        
+        if (targetCoords) {
+          // If different floor, go to stairs/elevator first on current floor
+          if (targetCoords.f !== npc.floorIndex) {
+            let transitX = -1, transitY = -1;
+            for (let ty = 0; ty < GRID_SIZE; ty++) {
+              for (let tx = 0; tx < GRID_SIZE; tx++) {
+                const tile = state.floors[npc.floorIndex].grid[ty][tx];
+                if (tile === 'elevator' || tile === 'stairs') {
+                  transitX = tx; transitY = ty; break;
+                }
+              }
+              if (transitX !== -1) break;
+            }
+            
+            if (transitX !== -1) {
+              npc.targetX = transitX;
+              npc.targetY = transitY;
+            } else {
+              // teleport fallback
+              npc.floorIndex = targetCoords.f;
+              npc.targetX = targetCoords.x;
+              npc.targetY = targetCoords.y;
+            }
+          } else {
+            npc.targetX = targetCoords.x;
+            npc.targetY = targetCoords.y;
+          }
+        }
+      }
+      
+      // Move staff towards target using pathfinding
+      if (npc.targetX !== undefined && npc.targetY !== undefined) {
+        const lastNode = npc.path && npc.path.length > 0 ? npc.path[npc.path.length - 1] : null;
+        const needsNewPath = !npc.path || npc.path.length === 0 || !lastNode || lastNode.x !== npc.targetX || lastNode.y !== npc.targetY;
+        
+        if (needsNewPath) {
+          const grid = state.floors[npc.floorIndex]?.grid;
+          if (grid) {
+            const calculatedPath = findPath(grid, npc.x, npc.y, npc.targetX, npc.targetY);
+            npc.path = calculatedPath || [{ x: npc.targetX, y: npc.targetY }];
+          } else {
+            npc.path = [{ x: npc.targetX, y: npc.targetY }];
+          }
+        }
+        
+        if (npc.path && npc.path.length > 0) {
+          const nextStep = npc.path[0];
+          const dx = nextStep.x - npc.x;
+          const dy = nextStep.y - npc.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist > 0.15) {
+            npc.x += (dx / dist) * 0.4;
+          } else {
+            npc.x = nextStep.x;
+            npc.y = nextStep.y;
+            npc.path.shift();
+          }
+        }
+        
+        const finalDx = npc.targetX - npc.x;
+        const finalDy = npc.targetY - npc.y;
+        const finalDist = Math.sqrt(finalDx * finalDx + finalDy * finalDy);
+        
+        if (finalDist <= 0.15) {
+          npc.x = npc.targetX;
+          npc.y = npc.targetY;
+          npc.path = [];
+          
+          // Check if we are at a transit tile to change floor
+          const currentTile = state.floors[npc.floorIndex]?.grid[npc.targetY]?.[npc.targetX];
+          if (currentTile === 'elevator' || currentTile === 'stairs') {
+            const floorsCount = state.floors.length;
+            npc.floorIndex = (npc.floorIndex + 1) % floorsCount;
+          }
+          
+          npc.targetX = undefined;
+          npc.targetY = undefined;
+        }
+      }
+      
+      return npc;
+    });
+
     setTimeout(() => checkMilestones(useHotelStore.getState(), set), 0);
     const updatedStateFields = { 
       guests: newGuests, 
       money: state.money + extraMoney, 
-      staff: state.staff,
+      staff: updatedStaff,
       totalGuestsServed: nextGuestsServed
     };
     const synced = syncActiveHotelHelper({ ...state, ...updatedStateFields });
@@ -1333,6 +1588,22 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
   setViewMode: (mode) => set({ viewMode: mode }),
   setAppMode: (mode) => set({ appMode: mode }),
   setSelectedTool: (tool) => set({ selectedTool: tool }),
+
+  toggleDoor: (floorIndex, x, y) => set((state) => {
+    const key = `${floorIndex}-${x}-${y}`;
+    const nextOpenDoors = { ...state.openDoors };
+    nextOpenDoors[key] = !nextOpenDoors[key];
+    return { openDoors: nextOpenDoors };
+  }),
+  setGraphicsQuality: (quality) => set({ graphicsQuality: quality }),
+  setSpectatorMode: (enabled) => set({ spectatorMode: enabled }),
+
+  callElevator: (targetFloor) => {
+    set({ isElevatorMoving: true, elevatorTargetFloor: targetFloor });
+    setTimeout(() => {
+      set({ activeFloorIndex: targetFloor, isElevatorMoving: false, elevatorTargetFloor: null });
+    }, 2000);
+  },
 
   loadPreset: (presetId) => set((state) => {
     if (PRESETS[presetId]) {

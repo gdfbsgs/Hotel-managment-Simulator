@@ -1015,6 +1015,21 @@ export const Management: React.FC = () => {
                     <p className="text-xs text-slate-500 mt-0.5">1 Floor: Basic Core Grid</p>
                   </div>
                 </button>
+
+                <button 
+                  onClick={() => { loadPreset('radisson-blu-olimpiiskii'); }}
+                  className="flex items-center gap-4 p-4 border-2 border-amber-500/30 rounded-xl hover:border-amber-500 hover:bg-amber-500/10 transition-all text-left bg-slate-950/60 shadow-lg shadow-amber-500/5 group relative overflow-hidden"
+                >
+                  <div className="p-3 bg-amber-500/20 text-amber-400 rounded-lg group-hover:scale-110 transition-transform"><Sparkles size={24} className="animate-pulse" /></div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="font-bold text-white text-sm">Radisson Blu Olimpiiskii</h4>
+                      <span className="text-[8px] font-bold text-amber-400 bg-amber-950/80 px-1 py-0.5 rounded uppercase border border-amber-500/30">Official</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">10 Hotel Floors: Tech & Offices (1-12F) • SPA & Gym (13F) • Standard (14-22F) • Superior & Presidential Suite (23-31F)</p>
+                    <p className="text-[10px] text-amber-500/60 font-mono mt-0.5">Lobby & FireLake • Office Space • Executive Conference • SPA The Elements & Gym • Standard Panoramic • Superior Suite • Presidential Suite (31F)</p>
+                  </div>
+                </button>
               </div>
             </div>
           </div>

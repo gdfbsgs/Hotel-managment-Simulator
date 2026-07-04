@@ -45,6 +45,12 @@ export interface StaffNPC {
   role: 'receptionist' | 'cleaner' | 'manager';
   salary: number;
   currentTask?: StaffTask;
+  x?: number;
+  y?: number;
+  targetX?: number;
+  targetY?: number;
+  floorIndex?: number;
+  path?: { x: number, y: number }[];
 }
 
 export type GuestState = 'wandering' | 'checking-in' | 'going-to-elevator' | 'going-to-room' | 'in-room' | 'checking-out' | 'going-to-elevator-checkout' | 'leaving';
@@ -65,6 +71,7 @@ export interface GuestNPC {
   finalTargetY?: number;
   finalFloorIndex?: number;
   floorIndex: number;
+  path?: { x: number, y: number }[];
   isVip?: boolean;
   vipNeed?: 'champagne' | 'valet' | 'suite' | 'spa' | 'none';
   vipSatisfaction?: number; // 0 to 100

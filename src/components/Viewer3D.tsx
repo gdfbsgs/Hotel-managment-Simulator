@@ -4,12 +4,138 @@ import { OrbitControls, Sky, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useHotelStore } from '../store';
 import { TileType } from '../types';
-import { ChevronUp, ChevronDown, Move, Eye } from 'lucide-react';
+import { ChevronUp, ChevronDown, Move, Eye, Volume2, VolumeX, Flame, ShieldAlert, Music, Radio, Tv, Activity, X } from 'lucide-react';
 
 const GRID_SIZE = 20;
 const TILE_SIZE = 2;
-const WALL_HEIGHT = 3.8; // Taller ceiling height like in real-life luxury hotels
+const WALL_HEIGHT = 5.2; // Majestic, high-ceiling luxury hotel walls (5.2 meters)
 const FLOOR_HEIGHT = 0.1;
+
+// --- WEB AUDIO API REALISTIC CHIMES & ELEVATOR LOUNGE MUSIC SYNTHESIZERS ---
+let audioCtx: AudioContext | null = null;
+let musicIntervalId: any = null;
+let musicNodes: any[] = [];
+
+const playElevatorChime = () => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    
+    const playTone = (freq: number, start: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.12, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+      osc.start(start);
+      osc.stop(start + duration);
+    };
+    
+    const now = ctx.currentTime;
+    // Premium double-tone electronic ding-dong chime
+    playTone(523.25, now, 0.45); // C5
+    playTone(659.25, now + 0.15, 0.6); // E5
+  } catch (e) {
+    console.warn("Audio chime disabled:", e);
+  }
+};
+
+const startElevatorMusic = () => {
+  try {
+    if (audioCtx) return;
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    audioCtx = new AudioContextClass();
+    
+    let step = 0;
+    // Elegant warm lounge jazz arpeggio progression (Gmaj7 -> Cmaj7 -> Amin7 -> D7)
+    const progressions = [
+      [196.00, 246.94, 293.66, 392.00], // Gmaj7
+      [261.63, 329.63, 392.00, 523.25], // Cmaj7
+      [220.00, 261.63, 329.63, 440.00], // Amin7
+      [293.66, 369.99, 440.00, 587.33], // D7
+    ];
+    
+    const tick = () => {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const chord = progressions[step % progressions.length];
+      step++;
+      
+      chord.forEach((freq, idx) => {
+        const osc = audioCtx!.createOscillator();
+        const gain = audioCtx!.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx!.destination);
+        
+        osc.type = 'sine';
+        // Delay notes slightly for a realistic Rhodes electric piano arpeggiated lounge feel
+        const noteStart = now + idx * 0.12;
+        osc.frequency.setValueAtTime(freq, noteStart);
+        
+        gain.gain.setValueAtTime(0.03, noteStart);
+        gain.gain.exponentialRampToValueAtTime(0.001, noteStart + 1.2);
+        
+        osc.start(noteStart);
+        osc.stop(noteStart + 1.3);
+        musicNodes.push(osc);
+      });
+    };
+    
+    tick();
+    musicIntervalId = setInterval(tick, 1500);
+  } catch (e) {
+    console.warn("Music failed:", e);
+  }
+};
+
+const stopElevatorMusic = () => {
+  if (musicIntervalId) {
+    clearInterval(musicIntervalId);
+    musicIntervalId = null;
+  }
+  musicNodes.forEach(node => {
+    try { node.stop(); } catch(e) {}
+  });
+  musicNodes = [];
+  if (audioCtx) {
+    try { audioCtx.close(); } catch(e) {}
+    audioCtx = null;
+  }
+};
+
+const triggerEmergencyAlarm = () => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.type = 'sawtooth';
+    const now = ctx.currentTime;
+    
+    // Siren pitch modulation
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.linearRampToValueAtTime(1400, now + 0.3);
+    osc.frequency.linearRampToValueAtTime(800, now + 0.6);
+    
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    
+    osc.start(now);
+    osc.stop(now + 0.6);
+  } catch (e) {
+    console.warn("Alarm chime failed:", e);
+  }
+};
 
 // --- HIGH FIDELITY PROCEDURAL TEXTURE GENERATORS ---
 const createTerrazzoTexture = () => {
@@ -227,7 +353,7 @@ interface FpsControlsProps {
 
 const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
   const { camera } = useThree();
-  const { activeFloorIndex, floors } = useHotelStore();
+  const { activeFloorIndex, floors, spectatorMode, openDoors } = useHotelStore();
   const keys = useRef<{ [key: string]: boolean }>({});
   
   const yaw = useRef(0);
@@ -238,9 +364,30 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
   const bobTimer = useRef(0);
 
   useEffect(() => {
-    // Spawn exactly at the front entrance (row 14, x: 10) on the Ground Floor, looking straight ahead!
+    const activeFloor = floors[activeFloorIndex];
+    let spawnGx = 10;
+    let spawnGy = 16;
+    let foundSpawn = false;
+    
+    if (activeFloor) {
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const tile = activeFloor.grid[y][x];
+          if (tile === 'floor' || tile === 'reception' || tile === 'elevator') {
+            spawnGx = x;
+            spawnGy = y;
+            foundSpawn = true;
+            break;
+          }
+        }
+        if (foundSpawn) break;
+      }
+    }
+    
+    const spawnX = spawnGx * TILE_SIZE + TILE_SIZE / 2 - 20;
+    const spawnZ = spawnGy * TILE_SIZE + TILE_SIZE / 2 - 20;
     const eyeHeight = activeFloorIndex * WALL_HEIGHT + 1.7; // Realistic human eye level (1.7m)
-    camera.position.set(1, eyeHeight, 10); // Center entrance position in World Coordinates
+    camera.position.set(spawnX, eyeHeight, spawnZ);
     
     // Facing forward (straight ahead / slightly downward to see the reception)
     yaw.current = 0;
@@ -248,8 +395,14 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
     camera.rotation.order = 'YXZ';
     camera.rotation.set(pitch.current, yaw.current, 0);
     
-    const handleKeyDown = (e: KeyboardEvent) => { keys.current[e.code] = true; };
-    const handleKeyUp = (e: KeyboardEvent) => { keys.current[e.code] = false; };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      keys.current[e.code] = true;
+      keys.current[e.key.toLowerCase()] = true;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keys.current[e.code] = false;
+      keys.current[e.key.toLowerCase()] = false;
+    };
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
 
@@ -299,10 +452,10 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
     let forward = 0;
     let strafe = 0;
     
-    if (keys.current['KeyW'] || keys.current['ArrowUp']) forward += 1;
-    if (keys.current['KeyS'] || keys.current['ArrowDown']) forward -= 1;
-    if (keys.current['KeyD'] || keys.current['ArrowRight']) strafe += 1;
-    if (keys.current['KeyA'] || keys.current['ArrowLeft']) strafe -= 1;
+    if (keys.current['KeyW'] || keys.current['ArrowUp'] || keys.current['w']) forward += 1;
+    if (keys.current['KeyS'] || keys.current['ArrowDown'] || keys.current['s']) forward -= 1;
+    if (keys.current['KeyD'] || keys.current['ArrowRight'] || keys.current['d']) strafe += 1;
+    if (keys.current['KeyA'] || keys.current['ArrowLeft'] || keys.current['a']) strafe -= 1;
     
     if (joystickRef.current) {
       if (Math.abs(joystickRef.current.y) > 0.05) {
@@ -341,6 +494,8 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
     
     // --- NO WALK THROUGH WALLS COLLISION SYSTEM WITH SLIDING VECTOR MECHANICS ---
     const checkCollision = (pos: THREE.Vector3) => {
+      if (spectatorMode) return false; // Noclip flight bypass!
+      
       const radius = 0.55; // Realistic human collision thickness radius
       const activeFloor = floors[activeFloorIndex];
       if (!activeFloor) return false;
@@ -352,8 +507,6 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
         const testZ = pos.z + Math.sin(angle) * radius;
 
         // Map world coordinates back to layout grid coords
-        // worldX = gridX * TILE_SIZE + TILE_SIZE/2 - offset, with offset = (GRID_SIZE * TILE_SIZE)/2 = 20
-        // Therefore, gridX = (worldX + 20) / 2
         const gx = Math.floor((testX + 20) / 2);
         const gy = Math.floor((testZ + 20) / 2);
 
@@ -361,6 +514,13 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
           const tile = activeFloor.grid[gy]?.[gx];
           if (tile === 'wall') {
             return true; // Collision detected!
+          }
+          if (tile === 'door') {
+            const doorKey = `${activeFloorIndex}-${gx}-${gy}`;
+            const isOpened = openDoors[doorKey] || false;
+            if (!isOpened) {
+              return true; // CLOSED DOOR BLOCKS!
+            }
           }
         } else {
           // Prevent walking outside extreme boundary limits
@@ -396,16 +556,24 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
       camera.position.z = nextPosition.z;
     }
     
-    // Immersive head bobbing animation for realistic stride feel
-    if (isMoving) {
-      bobTimer.current += delta * 11;
+    if (spectatorMode) {
+      // In spectator mode, key Space/E flies up, key Shift/Q flies down!
+      let lift = 0;
+      if (keys.current['Space'] || keys.current['KeyE']) lift += 1;
+      if (keys.current['ShiftLeft'] || keys.current['ShiftRight'] || keys.current['KeyQ']) lift -= 1;
+      camera.position.y += lift * 5 * delta;
     } else {
-      bobTimer.current = Math.max(0, bobTimer.current - delta * 5);
+      // Immersive head bobbing animation for realistic stride feel
+      if (isMoving) {
+        bobTimer.current += delta * 11;
+      } else {
+        bobTimer.current = Math.max(0, bobTimer.current - delta * 5);
+      }
+      const bobOffset = isMoving ? Math.sin(bobTimer.current) * 0.07 : 0;
+      
+      const baseFloorY = activeFloorIndex * WALL_HEIGHT;
+      camera.position.y = baseFloorY + 1.7 + bobOffset;
     }
-    const bobOffset = isMoving ? Math.sin(bobTimer.current) * 0.07 : 0;
-    
-    const baseFloorY = activeFloorIndex * WALL_HEIGHT;
-    camera.position.y = baseFloorY + 1.7 + bobOffset;
   });
 
   return null;
@@ -448,6 +616,9 @@ const getMergedBlocks = (grid: TileType[][], type: TileType) => {
 };
 
 const MergedBed = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: number, grid: TileType[][] }) => {
+  const { graphicsQuality } = useHotelStore();
+  const roughnessVal = graphicsQuality === 'ultra' ? 0.15 : graphicsQuality === 'high' ? 0.35 : graphicsQuality === 'medium' ? 0.6 : 0.95;
+
   let touchesTop = false, touchesBottom = false, touchesLeft = false, touchesRight = false;
   for (let i = 0; i < w; i++) {
     if (y > 0 && grid[y-1][x+i] === 'wall') touchesTop = true;
@@ -458,18 +629,53 @@ const MergedBed = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: n
     if (x + w < grid[0].length && grid[y+i][x+w] === 'wall') touchesRight = true;
   }
 
-  let pillowPos: [number, number, number] = [0, 0.75, -h * TILE_SIZE * 0.45 + 0.4];
-  let pillowArgs: [number, number, number] = [w * TILE_SIZE * 0.6, 0.1, 0.4];
+  // Position of dual pillows, headboard, nightstands, and lamp relative to the frame
+  let pillow1Pos: [number, number, number] = [-0.4, 0.72, -h * TILE_SIZE * 0.38];
+  let pillow2Pos: [number, number, number] = [0.4, 0.72, -h * TILE_SIZE * 0.38];
+  let headboardPos: [number, number, number] = [0, 0.9, -h * TILE_SIZE * 0.46];
+  let headboardArgs: [number, number, number] = [w * TILE_SIZE * 0.9, 1.2, 0.1];
+  
+  let ns1Pos: [number, number, number] = [-w * TILE_SIZE * 0.45, 0.35, -h * TILE_SIZE * 0.38];
+  let ns2Pos: [number, number, number] = [w * TILE_SIZE * 0.45, 0.35, -h * TILE_SIZE * 0.38];
+
+  let sheetPos: [number, number, number] = [0, 0.46, -h * TILE_SIZE * 0.12];
+  let sheetArgs: [number, number, number] = [w * TILE_SIZE * 0.82, 0.48, h * TILE_SIZE * 0.5];
+  let blanketPos: [number, number, number] = [0, 0.48, h * TILE_SIZE * 0.12];
+  let blanketArgs: [number, number, number] = [w * TILE_SIZE * 0.84, 0.5, h * TILE_SIZE * 0.55];
 
   if (touchesLeft && !touchesTop && !touchesBottom) {
-    pillowPos = [-w * TILE_SIZE * 0.45 + 0.4, 0.75, 0];
-    pillowArgs = [0.4, 0.1, h * TILE_SIZE * 0.6];
+    pillow1Pos = [-w * TILE_SIZE * 0.38, 0.72, -0.4];
+    pillow2Pos = [-w * TILE_SIZE * 0.38, 0.72, 0.4];
+    headboardPos = [-w * TILE_SIZE * 0.46, 0.9, 0];
+    headboardArgs = [0.1, 1.2, h * TILE_SIZE * 0.9];
+    ns1Pos = [-w * TILE_SIZE * 0.38, 0.35, -h * TILE_SIZE * 0.45];
+    ns2Pos = [-w * TILE_SIZE * 0.38, 0.35, h * TILE_SIZE * 0.45];
+    sheetPos = [-w * TILE_SIZE * 0.12, 0.46, 0];
+    sheetArgs = [w * TILE_SIZE * 0.5, 0.48, h * TILE_SIZE * 0.82];
+    blanketPos = [w * TILE_SIZE * 0.12, 0.48, 0];
+    blanketArgs = [w * TILE_SIZE * 0.55, 0.5, h * TILE_SIZE * 0.84];
   } else if (touchesRight && !touchesTop && !touchesBottom) {
-    pillowPos = [w * TILE_SIZE * 0.45 - 0.4, 0.75, 0];
-    pillowArgs = [0.4, 0.1, h * TILE_SIZE * 0.6];
+    pillow1Pos = [w * TILE_SIZE * 0.38, 0.72, -0.4];
+    pillow2Pos = [w * TILE_SIZE * 0.38, 0.72, 0.4];
+    headboardPos = [w * TILE_SIZE * 0.46, 0.9, 0];
+    headboardArgs = [0.1, 1.2, h * TILE_SIZE * 0.9];
+    ns1Pos = [w * TILE_SIZE * 0.38, 0.35, -h * TILE_SIZE * 0.45];
+    ns2Pos = [w * TILE_SIZE * 0.38, 0.35, h * TILE_SIZE * 0.45];
+    sheetPos = [w * TILE_SIZE * 0.12, 0.46, 0];
+    sheetArgs = [w * TILE_SIZE * 0.5, 0.48, h * TILE_SIZE * 0.82];
+    blanketPos = [-w * TILE_SIZE * 0.12, 0.48, 0];
+    blanketArgs = [w * TILE_SIZE * 0.55, 0.5, h * TILE_SIZE * 0.84];
   } else if (touchesBottom && !touchesTop) {
-    pillowPos = [0, 0.75, h * TILE_SIZE * 0.45 - 0.4];
-    pillowArgs = [w * TILE_SIZE * 0.6, 0.1, 0.4];
+    pillow1Pos = [-0.4, 0.72, h * TILE_SIZE * 0.38];
+    pillow2Pos = [0.4, 0.72, h * TILE_SIZE * 0.38];
+    headboardPos = [0, 0.9, h * TILE_SIZE * 0.46];
+    headboardArgs = [w * TILE_SIZE * 0.9, 1.2, 0.1];
+    ns1Pos = [-w * TILE_SIZE * 0.45, 0.35, h * TILE_SIZE * 0.38];
+    ns2Pos = [w * TILE_SIZE * 0.45, 0.35, h * TILE_SIZE * 0.38];
+    sheetPos = [0, 0.46, h * TILE_SIZE * 0.12];
+    sheetArgs = [w * TILE_SIZE * 0.82, 0.48, h * TILE_SIZE * 0.5];
+    blanketPos = [0, 0.48, -h * TILE_SIZE * 0.12];
+    blanketArgs = [w * TILE_SIZE * 0.84, 0.5, h * TILE_SIZE * 0.55];
   }
 
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
@@ -477,22 +683,87 @@ const MergedBed = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: n
 
   const fabricSheets = getFabricSheetsTexture();
   const fabricBlanket = getFabricBlanketTexture();
+  const woodTexture = getWoodTexture();
 
   return (
     <group position={[centerX, 0, centerZ]}>
-      {/* Wood Base Bed Frame */}
+      {/* 1. TERRAZZO FLOOR SLAB UNDERNEATH - matches standard flooring tile */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial map={getWoodTexture()} roughness={0.7} />
+         <meshStandardMaterial map={getTerrazzoTexture()} roughness={roughnessVal} />
       </mesh>
-      {/* Cozy Mattress with Crimson Blanket */}
-      <mesh position={[0, 0.4, 0]}>
-        <boxGeometry args={[w * TILE_SIZE * 0.85, 0.6, h * TILE_SIZE * 0.85]} />
-        <meshStandardMaterial map={fabricBlanket} roughness={0.9} />
+
+      {/* 2. REALISTIC WOOD BED FRAME */}
+      <mesh position={[0, 0.15 + FLOOR_HEIGHT, 0]}>
+         <boxGeometry args={[w * TILE_SIZE * 0.94, 0.2, h * TILE_SIZE * 0.94]} />
+         <meshStandardMaterial map={woodTexture} roughness={0.6} />
       </mesh>
-      {/* White Pillow sheets */}
-      <mesh position={pillowPos}>
-        <boxGeometry args={pillowArgs} />
+
+      {/* 3. HEADBOARD */}
+      <mesh position={[headboardPos[0], headboardPos[1] + FLOOR_HEIGHT, headboardPos[2]]}>
+        <boxGeometry args={headboardArgs} />
+        <meshStandardMaterial map={woodTexture} roughness={0.5} />
+      </mesh>
+
+      {/* 4. BED NIGHTSTANDS */}
+      <mesh position={[ns1Pos[0], ns1Pos[1] + FLOOR_HEIGHT, ns1Pos[2]]}>
+        <boxGeometry args={[0.4, 0.5, 0.4]} />
+        <meshStandardMaterial map={woodTexture} roughness={0.5} />
+      </mesh>
+      <mesh position={[ns2Pos[0], ns2Pos[1] + FLOOR_HEIGHT, ns2Pos[2]]}>
+        <boxGeometry args={[0.4, 0.5, 0.4]} />
+        <meshStandardMaterial map={woodTexture} roughness={0.5} />
+      </mesh>
+
+      {/* 5. GLOWING BEDSIDE LAMPS */}
+      {/* Lamp 1 */}
+      <group position={[ns1Pos[0], ns1Pos[1] + 0.25 + FLOOR_HEIGHT, ns1Pos[2]]}>
+        <mesh position={[0, 0.05, 0]}>
+          <cylinderGeometry args={[0.02, 0.02, 0.1, 8]} />
+          <meshStandardMaterial color="#334155" metalness={0.9} roughness={0.1} />
+        </mesh>
+        <mesh position={[0, 0.15, 0]}>
+          <cylinderGeometry args={[0.08, 0.12, 0.15, 12]} />
+          <meshStandardMaterial color="#fef08a" emissive="#fbbf24" emissiveIntensity={0.8} />
+        </mesh>
+        {graphicsQuality !== 'low' && (
+          <pointLight position={[0, 0.15, 0]} color="#f59e0b" intensity={0.5} distance={2.5} />
+        )}
+      </group>
+      {/* Lamp 2 */}
+      <group position={[ns2Pos[0], ns2Pos[1] + 0.25 + FLOOR_HEIGHT, ns2Pos[2]]}>
+        <mesh position={[0, 0.05, 0]}>
+          <cylinderGeometry args={[0.02, 0.02, 0.1, 8]} />
+          <meshStandardMaterial color="#334155" metalness={0.9} roughness={0.1} />
+        </mesh>
+        <mesh position={[0, 0.15, 0]}>
+          <cylinderGeometry args={[0.08, 0.12, 0.15, 12]} />
+          <meshStandardMaterial color="#fef08a" emissive="#fbbf24" emissiveIntensity={0.8} />
+        </mesh>
+        {graphicsQuality !== 'low' && (
+          <pointLight position={[0, 0.15, 0]} color="#f59e0b" intensity={0.5} distance={2.5} />
+        )}
+      </group>
+
+      {/* 6. COZY LAYERED MATTRESS & BLANKET */}
+      {/* White Base Sheets Mattress */}
+      <mesh position={[sheetPos[0], sheetPos[1] + FLOOR_HEIGHT, sheetPos[2]]}>
+        <boxGeometry args={sheetArgs} />
+        <meshStandardMaterial map={fabricSheets} roughness={0.9} />
+      </mesh>
+      {/* Folded Crimson Blanket */}
+      <mesh position={[blanketPos[0], blanketPos[1] + FLOOR_HEIGHT, blanketPos[2]]}>
+        <boxGeometry args={blanketArgs} />
+        <meshStandardMaterial map={fabricBlanket} roughness={0.85} />
+      </mesh>
+
+      {/* 7. DUAL FLUFFY PILLOWS */}
+      <mesh position={[pillow1Pos[0], pillow1Pos[1] + FLOOR_HEIGHT, pillow1Pos[2]]}>
+        <boxGeometry args={[0.42, 0.08, 0.28]} />
+        <meshStandardMaterial map={fabricSheets} roughness={0.95} />
+      </mesh>
+      <mesh position={[pillow2Pos[0], pillow2Pos[1] + FLOOR_HEIGHT, pillow2Pos[2]]}>
+        <boxGeometry args={[0.42, 0.08, 0.28]} />
         <meshStandardMaterial map={fabricSheets} roughness={0.95} />
       </mesh>
     </group>
@@ -500,48 +771,63 @@ const MergedBed = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: n
 };
 
 const MergedTable = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+  const { graphicsQuality } = useHotelStore();
+  const roughnessVal = graphicsQuality === 'ultra' ? 0.15 : graphicsQuality === 'high' ? 0.35 : graphicsQuality === 'medium' ? 0.6 : 0.95;
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
+
   return (
     <group position={[centerX, 0, centerZ]}>
+      {/* TERRAZZO FLOOR SLAB UNDERNEATH */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial color="#cbd5e1" />
+         <meshStandardMaterial map={getTerrazzoTexture()} roughness={roughnessVal} />
       </mesh>
       {/* Wooden tabletop */}
-      <mesh position={[0, 0.5, 0]}>
-        <boxGeometry args={[w * TILE_SIZE * 0.8, 0.1, h * TILE_SIZE * 0.8]} />
-        <meshStandardMaterial map={getWoodTexture()} roughness={0.65} />
+      <mesh position={[0, 0.55 + FLOOR_HEIGHT, 0]}>
+        <boxGeometry args={[w * TILE_SIZE * 0.8, 0.08, h * TILE_SIZE * 0.8]} />
+        <meshStandardMaterial map={getWoodTexture()} roughness={0.5} />
       </mesh>
       {/* Center column stand */}
-      <mesh position={[0, 0.25, 0]}>
-        <boxGeometry args={[w * TILE_SIZE * 0.2, 0.5, h * TILE_SIZE * 0.2]} />
-        <meshStandardMaterial map={getMahoganyTexture()} roughness={0.8} />
+      <mesh position={[0, 0.28 + FLOOR_HEIGHT, 0]}>
+        <cylinderGeometry args={[0.06, 0.08, 0.55, 8]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.1} />
       </mesh>
     </group>
   );
 };
 
 const MergedReception = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+  const { graphicsQuality } = useHotelStore();
+  const roughnessVal = graphicsQuality === 'ultra' ? 0.15 : graphicsQuality === 'high' ? 0.35 : graphicsQuality === 'medium' ? 0.6 : 0.95;
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
+
   return (
     <group position={[centerX, 0, centerZ]}>
       {/* Terrazzo desk base slab */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial map={getTerrazzoTexture()} roughness={0.4} />
+         <meshStandardMaterial map={getTerrazzoTexture()} roughness={roughnessVal} />
       </mesh>
       {/* Mahogany Front Desk Counter */}
-      <mesh position={[0, 0.6, 0]}>
-        <boxGeometry args={[w * TILE_SIZE * 0.9, 1.2, h * TILE_SIZE * 0.9]} />
-        <meshStandardMaterial map={getMahoganyTexture()} roughness={0.7} />
+      <mesh position={[0, 0.55 + FLOOR_HEIGHT, 0]}>
+        <boxGeometry args={[w * TILE_SIZE * 0.9, 1.1, h * TILE_SIZE * 0.9]} />
+        <meshStandardMaterial map={getMahoganyTexture()} roughness={0.5} />
+      </mesh>
+      {/* Brass / Golden decorative horizontal accent stripe */}
+      <mesh position={[0, 0.7 + FLOOR_HEIGHT, h * TILE_SIZE * 0.46]}>
+        <boxGeometry args={[w * TILE_SIZE * 0.91, 0.06, 0.02]} />
+        <meshStandardMaterial color="#d97706" metalness={0.95} roughness={0.05} />
       </mesh>
     </group>
   );
 };
 
 const MergedWindow = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: number, grid: TileType[][] }) => {
+  const { graphicsQuality } = useHotelStore();
+  const roughnessVal = graphicsQuality === 'ultra' ? 0.15 : graphicsQuality === 'high' ? 0.35 : graphicsQuality === 'medium' ? 0.6 : 0.95;
+
   let windowRotation = 0;
   if (w > h) windowRotation = 0;
   else if (h > w) windowRotation = Math.PI / 2;
@@ -559,10 +845,12 @@ const MergedWindow = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h
 
   return (
     <group position={[centerX, 0, centerZ]}>
+      {/* TERRAZZO FLOOR SLAB UNDERNEATH */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial color="#e2e8f0" />
+         <meshStandardMaterial map={getTerrazzoTexture()} roughness={roughnessVal} />
       </mesh>
+      {/* Window glass pane */}
       <mesh position={[0, WALL_HEIGHT / 2, 0]} rotation={[0, windowRotation, 0]}>
         <boxGeometry args={[glassLength, windowHeight, TILE_SIZE * 0.15]} />
         <meshStandardMaterial color="#a5f3fc" transparent opacity={0.65} metalness={0.9} roughness={0.1} />
@@ -572,6 +860,10 @@ const MergedWindow = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h
 };
 
 const MergedDoor = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: number, grid: TileType[][] }) => {
+  const { activeFloorIndex, openDoors, toggleDoor } = useHotelStore();
+  const [hovered, setHovered] = useState(false);
+  const hingeRef = useRef<THREE.Group>(null);
+  
   let doorRotation = 0;
   if (w > h) doorRotation = 0; 
   else if (h > w) doorRotation = Math.PI / 2;
@@ -580,31 +872,75 @@ const MergedDoor = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: 
     const bottom = y + h < grid.length ? grid[y + h][x] : null;
     if (top === 'wall' || bottom === 'wall') doorRotation = Math.PI / 2;
   }
+  
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
-  const doorLength = doorRotation === 0 ? w * TILE_SIZE * 0.9 : h * TILE_SIZE * 0.9;
-
-  // Hardcode door height to a highly realistic 2.2 meters instead of matching full WALL_HEIGHT
+  const doorLength = doorRotation === 0 ? w * TILE_SIZE * 0.95 : h * TILE_SIZE * 0.95;
   const doorHeight = 2.2;
+  
+  const doorKey = `${activeFloorIndex}-${x}-${y}`;
+  const isOpened = openDoors[doorKey] || false;
+  
+  useFrame(() => {
+    if (!hingeRef.current) return;
+    const targetRot = isOpened ? -Math.PI / 1.8 : 0;
+    hingeRef.current.rotation.y = THREE.MathUtils.lerp(hingeRef.current.rotation.y, targetRot, 0.15);
+  });
+
+  useEffect(() => {
+    if (hovered) {
+      document.body.style.cursor = 'pointer';
+    }
+    return () => {
+      document.body.style.cursor = 'auto';
+    };
+  }, [hovered]);
 
   return (
     <group position={[centerX, 0, centerZ]}>
+      {/* Floor Slab matching the floor tiles */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
          <meshStandardMaterial map={getTerrazzoTexture()} roughness={0.4} />
       </mesh>
-      {/* Mahogany Wood Door Slab */}
-      <mesh position={[0, doorHeight / 2, 0]} rotation={[0, doorRotation, 0]}>
-        <boxGeometry args={[doorLength, doorHeight, TILE_SIZE * 0.18]} />
-        <meshStandardMaterial map={getMahoganyTexture()} roughness={0.7} />
-      </mesh>
-      {/* Metallic Door Frame / Transom overhead */}
+      
+      {/* Overhead metallic transom */}
       {WALL_HEIGHT > doorHeight && (
         <mesh position={[0, (WALL_HEIGHT + doorHeight) / 2, 0]} rotation={[0, doorRotation, 0]}>
           <boxGeometry args={[w * TILE_SIZE, WALL_HEIGHT - doorHeight, TILE_SIZE * 0.22]} />
           <meshStandardMaterial color="#0f172a" metalness={0.85} roughness={0.15} />
         </mesh>
       )}
+
+      {/* Hinge group rotated in world space */}
+      <group rotation={[0, doorRotation, 0]}>
+        {/* Hinge position offset */}
+        <group ref={hingeRef} position={[-doorLength / 2, 0, 0]}>
+          {/* Door slab relative to hinge */}
+          <mesh 
+            position={[doorLength / 2, doorHeight / 2, 0]}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleDoor(activeFloorIndex, x, y);
+            }}
+            onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
+            onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
+          >
+            <boxGeometry args={[doorLength, doorHeight, TILE_SIZE * 0.16]} />
+            <meshStandardMaterial 
+              map={getMahoganyTexture()} 
+              roughness={0.6}
+              emissive={hovered ? "#eab308" : "#000000"}
+              emissiveIntensity={hovered ? 0.25 : 0}
+            />
+          </mesh>
+          {/* Sleek metallic door handle */}
+          <mesh position={[doorLength * 0.85, doorHeight * 0.5, TILE_SIZE * 0.11]}>
+            <boxGeometry args={[0.04, 0.15, 0.03]} />
+            <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
+          </mesh>
+        </group>
+      </group>
     </group>
   );
 };
@@ -620,7 +956,7 @@ const MergedBathroom = ({ x, y, w, h }: { x: number, y: number, w: number, h: nu
          <meshStandardMaterial map={getBathroomTexture()} roughness={0.3} />
       </mesh>
       {/* Porcelain sink vanity counter */}
-      <mesh position={[0, 0.4, 0]}>
+      <mesh position={[0, 0.4 + FLOOR_HEIGHT, 0]}>
          <boxGeometry args={[w * TILE_SIZE * 0.5, 0.8, h * TILE_SIZE * 0.5]} />
          <meshStandardMaterial color="#ffffff" roughness={0.05} metalness={0.1} />
       </mesh>
@@ -635,13 +971,13 @@ const MergedStaff = ({ x, y, w, h }: { x: number, y: number, w: number, h: numbe
     <group position={[centerX, 0, centerZ]}>
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial color="#ffe4e6" />
+         <meshStandardMaterial map={getTerrazzoTexture()} roughness={0.5} />
       </mesh>
-      <mesh position={[0, 0.5, 0]}>
+      <mesh position={[0, 0.5 + FLOOR_HEIGHT, 0]}>
          <boxGeometry args={[w * TILE_SIZE * 0.7, 0.1, h * TILE_SIZE * 0.3]} />
          <meshStandardMaterial color="#9f1239" />
       </mesh>
-      <mesh position={[0, 0.65, 0]}>
+      <mesh position={[0, 0.65 + FLOOR_HEIGHT, 0]}>
          <boxGeometry args={[w * TILE_SIZE * 0.2, 0.3, h * TILE_SIZE * 0.1]} />
          <meshStandardMaterial color="#e11d48" />
       </mesh>
@@ -649,9 +985,109 @@ const MergedStaff = ({ x, y, w, h }: { x: number, y: number, w: number, h: numbe
   );
 };
 
-const MergedElevator = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+const MovingCabin = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+  const { activeFloorIndex, floors } = useHotelStore();
+  const [currentY, setCurrentY] = useState(activeFloorIndex * WALL_HEIGHT);
+  
+  const targetY = activeFloorIndex * WALL_HEIGHT;
+  
+  useFrame(() => {
+    setCurrentY((prev) => THREE.MathUtils.lerp(prev, targetY, 0.08));
+  });
+  
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
+  
+  return (
+    <group position={[centerX, currentY, centerZ]}>
+      {/* Glass & Steel cabin box */}
+      <mesh position={[0, 1.3, 0]} castShadow>
+        <boxGeometry args={[w * TILE_SIZE * 0.88, 2.5, h * TILE_SIZE * 0.88]} />
+        <meshStandardMaterial 
+          color="#38bdf8" 
+          metalness={0.9} 
+          roughness={0.1} 
+          transparent 
+          opacity={0.3} 
+        />
+      </mesh>
+      
+      {/* Metal floor and ceiling of cabin */}
+      <mesh position={[0, 0.05, 0]} castShadow>
+        <boxGeometry args={[w * TILE_SIZE * 0.86, 0.1, h * TILE_SIZE * 0.86]} />
+        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 2.55, 0]} castShadow>
+        <boxGeometry args={[w * TILE_SIZE * 0.86, 0.1, h * TILE_SIZE * 0.86]} />
+        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+      </mesh>
+      
+      {/* Golden handrails and trim inside the cabin */}
+      <mesh position={[0, 1.0, -h * TILE_SIZE * 0.4]}>
+        <boxGeometry args={[w * TILE_SIZE * 0.8, 0.06, 0.06]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
+      </mesh>
+      
+      {/* Inner glowing light */}
+      <pointLight color="#38bdf8" intensity={1.5} distance={5} position={[0, 2.0, 0]} />
+    </group>
+  );
+};
+
+const MergedElevator = ({ x, y, w, h, floorLevel, floorIndex }: { x: number, y: number, w: number, h: number, floorLevel: number, floorIndex: number }) => {
+  const { activeFloorIndex, isElevatorMoving, floors } = useHotelStore();
+  const leftDoorRef = useRef<THREE.Group>(null);
+  const rightDoorRef = useRef<THREE.Group>(null);
+  const [hovered, setHovered] = useState(false);
+
+  // Auto-align upper-floor elevator shafts with the ground floor (floor 0) elevator position to guarantee pristine vertical columns
+  let alignedX = x;
+  let alignedY = y;
+  const groundFloor = floors[0];
+  if (groundFloor && floorIndex > 0) {
+    const groundElevators = getMergedBlocks(groundFloor.grid, 'elevator');
+    let bestBlock = groundElevators[0];
+    let minDistance = Infinity;
+    for (const b of groundElevators) {
+      const dist = Math.abs(b.x - x) + Math.abs(b.y - y);
+      if (dist < minDistance) {
+        minDistance = dist;
+        bestBlock = b;
+      }
+    }
+    // Snap if within 3 tiles of ground floor elevator to prevent minor alignment/template offsets
+    if (bestBlock && minDistance <= 3) {
+      alignedX = bestBlock.x;
+      alignedY = bestBlock.y;
+    }
+  }
+
+  const centerX = alignedX * TILE_SIZE + (w * TILE_SIZE) / 2;
+  const centerZ = alignedY * TILE_SIZE + (h * TILE_SIZE) / 2;
+
+  // Doors are open only if the elevator is stationary on this floor!
+  const isDoorsOpen = !isElevatorMoving && activeFloorIndex === floorIndex;
+
+  useFrame(() => {
+    if (!leftDoorRef.current || !rightDoorRef.current) return;
+    
+    // Left door slides left, right door slides right
+    const targetLeftX = isDoorsOpen ? -w * TILE_SIZE * 0.45 : -w * TILE_SIZE * 0.23;
+    const targetRightX = isDoorsOpen ? w * TILE_SIZE * 0.45 : w * TILE_SIZE * 0.23;
+
+    leftDoorRef.current.position.x = THREE.MathUtils.lerp(leftDoorRef.current.position.x, targetLeftX, 0.12);
+    rightDoorRef.current.position.x = THREE.MathUtils.lerp(rightDoorRef.current.position.x, targetRightX, 0.12);
+  });
+
+  useEffect(() => {
+    if (hovered) {
+      document.body.style.cursor = 'pointer';
+    }
+    return () => {
+      document.body.style.cursor = 'auto';
+    };
+  }, [hovered]);
+
   return (
     <group position={[centerX, 0, centerZ]}>
       {/* Terrazzo marble elevator landing */}
@@ -659,17 +1095,74 @@ const MergedElevator = ({ x, y, w, h }: { x: number, y: number, w: number, h: nu
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
          <meshStandardMaterial map={getTerrazzoTexture()} roughness={0.4} />
       </mesh>
+      
       {/* Premium metallic brass shaft box */}
       <mesh position={[0, WALL_HEIGHT / 2, 0]}>
-        <boxGeometry args={[w * TILE_SIZE * 0.9, WALL_HEIGHT, h * TILE_SIZE * 0.9]} />
-        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} transparent opacity={0.95} />
+        <boxGeometry args={[w * TILE_SIZE * 0.92, WALL_HEIGHT, h * TILE_SIZE * 0.92]} />
+        <meshStandardMaterial color="#d97706" metalness={0.8} roughness={0.2} transparent opacity={0.92} />
       </mesh>
-      {/* Gold metallic sliding Elevator Doors */}
-      <mesh position={[0, 1.2, h * TILE_SIZE * 0.45 + 0.05]}>
-        <boxGeometry args={[w * TILE_SIZE * 0.5, 2.4, 0.1]} />
-        <meshStandardMaterial color="#fef08a" metalness={0.95} roughness={0.05} />
+      
+      {/* Sliding Gold Door - Left */}
+      <group ref={leftDoorRef} position={[-w * TILE_SIZE * 0.23, 1.2, h * TILE_SIZE * 0.46 + 0.01]}>
+        <mesh>
+          <boxGeometry args={[w * TILE_SIZE * 0.44, 2.4, 0.08]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
+        </mesh>
+      </group>
+
+      {/* Sliding Gold Door - Right */}
+      <group ref={rightDoorRef} position={[w * TILE_SIZE * 0.23, 1.2, h * TILE_SIZE * 0.46 + 0.01]}>
+        <mesh>
+          <boxGeometry args={[w * TILE_SIZE * 0.44, 2.4, 0.08]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
+        </mesh>
+      </group>
+
+      {/* KONE POLARIS CALL PANEL STANCHION */}
+      <mesh position={[w * TILE_SIZE * 0.42, 0.8, h * TILE_SIZE * 0.48 + 0.15]}>
+        <cylinderGeometry args={[0.03, 0.03, 1.6, 8]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.2} />
+      </mesh>
+      <mesh 
+        position={[w * TILE_SIZE * 0.42, 1.5, h * TILE_SIZE * 0.48 + 0.15]}
+        onClick={(e) => {
+          e.stopPropagation();
+          // Open the interactive KONE elevator console
+          window.dispatchEvent(new CustomEvent('open-kone-portal', { detail: { floorIndex } }));
+        }}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
+        onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
+      >
+        <boxGeometry args={[0.18, 0.3, 0.05]} />
+        <meshStandardMaterial 
+          color={isDoorsOpen ? "#10b981" : "#0284c7"} 
+          emissive={isDoorsOpen ? "#10b981" : "#0284c7"} 
+          emissiveIntensity={hovered ? 0.9 : 0.4} 
+        />
       </mesh>
     </group>
+  );
+};
+
+const MergedWall = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+  const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
+  const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
+  return (
+    <mesh position={[centerX, WALL_HEIGHT / 2, centerZ]} castShadow receiveShadow>
+      <boxGeometry args={[w * TILE_SIZE, WALL_HEIGHT, h * TILE_SIZE]} />
+      <meshStandardMaterial map={getWallTexture()} roughness={0.5} />
+    </mesh>
+  );
+};
+
+const MergedFloor = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+  const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
+  const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
+  return (
+    <mesh position={[centerX, FLOOR_HEIGHT / 2, centerZ]} receiveShadow>
+      <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
+      <meshStandardMaterial map={getTerrazzoTexture()} roughness={0.4} />
+    </mesh>
   );
 };
 
@@ -779,7 +1272,91 @@ const TileModel = ({ type, position }: { type: TileType; position: [number, numb
 };
 
 export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
-  const { floors, guests, activeFloorIndex, setActiveFloor } = useHotelStore();
+  const { floors, guests, staff, activeFloorIndex, setActiveFloor } = useHotelStore();
+
+  // --- KONE Polaris DCS Elevator States & Logic ---
+  const [konePortalOpen, setKonePortalOpen] = useState(false);
+  const [koneOriginFloor, setKoneOriginFloor] = useState(activeFloorIndex);
+  const [koneTargetFloor, setKoneTargetFloor] = useState(activeFloorIndex);
+  const [koneCabin, setKoneCabin] = useState<'A' | 'B' | 'C' | 'D'>('A');
+  const [koneStatus, setKoneStatus] = useState<'idle' | 'dispatching' | 'transit' | 'arrived' | 'emergency'>('idle');
+  const [koneMusicChannel, setKoneMusicChannel] = useState<'none' | 'lounge'>('none');
+  const [koneVoiceLog, setKoneVoiceLog] = useState<string[]>([
+    "KONE Polaris DCS online. Destination-ready."
+  ]);
+  const [dispatchLogs, setDispatchLogs] = useState<string[]>([]);
+  
+  const { isElevatorMoving, callElevator } = useHotelStore();
+
+  const addVoiceLog = (msg: string) => {
+    setKoneVoiceLog(prev => [msg, ...prev.slice(0, 10)]);
+  };
+
+  useEffect(() => {
+    const handleOpenKone = (e: CustomEvent<{ floorIndex: number }>) => {
+      const idx = e.detail.floorIndex ?? activeFloorIndex;
+      setKoneOriginFloor(idx);
+      setKoneTargetFloor(idx);
+      setKonePortalOpen(true);
+      setKoneStatus('idle');
+      const floorObj = floors[idx] || floors[0];
+      const floorName = floorObj?.name || `Floor ${idx + 1}`;
+      addVoiceLog(`Stanchion called from ${floorName}. Standing by.`);
+    };
+    window.addEventListener('open-kone-portal' as any, handleOpenKone);
+    return () => {
+      window.removeEventListener('open-kone-portal' as any, handleOpenKone);
+    };
+  }, [floors, activeFloorIndex]);
+
+  const handleSelectDestination = (floorIndex: number) => {
+    if (floorIndex === koneOriginFloor) {
+      addVoiceLog("DCS Error: Already at designated floor.");
+      return;
+    }
+    setKoneTargetFloor(floorIndex);
+    setKoneStatus('dispatching');
+    setDispatchLogs([
+      "DCS: Scanning hotel shaft load...",
+      "DCS: Performing group traffic dispatch...",
+      "DCS: Minimizing energy transit indices..."
+    ]);
+    const floorObj = floors[floorIndex] || floors[0];
+    const floorName = floorObj?.name || `Floor ${floorIndex + 1}`;
+    addVoiceLog(`Optimizing route to ${floorName}...`);
+    
+    setTimeout(() => {
+      const cabins: ('A' | 'B' | 'C' | 'D')[] = ['A', 'B', 'C', 'D'];
+      const designated = cabins[Math.floor(Math.random() * cabins.length)];
+      setKoneCabin(designated);
+      setKoneStatus('transit');
+      addVoiceLog(`DCS: Take CABIN ${designated} directly.`);
+      callElevator(floorIndex);
+    }, 1500);
+  };
+
+  useEffect(() => {
+    if (!isElevatorMoving && koneStatus === 'transit') {
+      setKoneStatus('arrived');
+      playElevatorChime();
+      const floorObj = floors[koneTargetFloor] || floors[0];
+      const floorName = floorObj?.name || `Floor ${koneTargetFloor + 1}`;
+      addVoiceLog(`Cabin ${koneCabin} has landed on ${floorName}. Welcome.`);
+      setKoneOriginFloor(koneTargetFloor);
+    }
+  }, [isElevatorMoving, koneStatus, floors, koneCabin, koneTargetFloor]);
+
+  useEffect(() => {
+    if (koneMusicChannel === 'none') {
+      stopElevatorMusic();
+    } else {
+      stopElevatorMusic();
+      startElevatorMusic();
+    }
+    return () => {
+      stopElevatorMusic();
+    };
+  }, [koneMusicChannel]);
 
   const offsetX = (GRID_SIZE * TILE_SIZE) / 2;
   const offsetZ = (GRID_SIZE * TILE_SIZE) / 2;
@@ -848,7 +1425,7 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
   }, [joystickActive]);
 
   // Types that are merged visually
-  const mergedTypes = ['bed', 'table', 'reception', 'window', 'door', 'elevator', 'bathroom', 'staff'];
+  const mergedTypes = ['bed', 'table', 'reception', 'window', 'door', 'elevator', 'bathroom', 'staff', 'wall', 'floor'];
 
   return (
     <div className={`flex-1 bg-slate-950 w-full h-full relative overflow-hidden select-none touch-none`}>
@@ -933,7 +1510,21 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
         </mesh>
 
         <group position={[-offsetX, 0, -offsetZ]}>
-          {floors.map((floor) => {
+          {/* Render the physical moving elevator cabins for all elevator shafts! */}
+          {(() => {
+            const firstFloor = floors[0];
+            if (!firstFloor) return null;
+            const elevatorBlocks = getMergedBlocks(firstFloor.grid, 'elevator');
+            return elevatorBlocks.map((b, i) => (
+              <MovingCabin key={`cabin-${i}`} {...b} />
+            ));
+          })()}
+
+          {floors.map((floor, floorIndex) => {
+            // Only render adjacent floors in Walk mode to maximize performance!
+            const isVisible = mode !== 'Walk' || Math.abs(floorIndex - activeFloorIndex) <= 1;
+            if (!isVisible) return null;
+
             const bedBlocks = getMergedBlocks(floor.grid, 'bed');
             const tableBlocks = getMergedBlocks(floor.grid, 'table');
             const receptionBlocks = getMergedBlocks(floor.grid, 'reception');
@@ -942,9 +1533,11 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
             const elevatorBlocks = getMergedBlocks(floor.grid, 'elevator');
             const bathroomBlocks = getMergedBlocks(floor.grid, 'bathroom');
             const staffBlocks = getMergedBlocks(floor.grid, 'staff');
+            const wallBlocks = getMergedBlocks(floor.grid, 'wall');
+            const floorBlocks = getMergedBlocks(floor.grid, 'floor');
 
             return (
-              <group key={floor.level} position={[0, floor.level * WALL_HEIGHT, 0]}>
+              <group key={floor.level} position={[0, floorIndex * WALL_HEIGHT, 0]}>
                 {floor.grid.map((row, y) => (
                   row.map((cell, x) => {
                     if (mergedTypes.includes(cell)) return null;
@@ -959,14 +1552,160 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
                 ))}
                 
                 {/* Render merged blocks */}
+                {wallBlocks.map((b, i) => <MergedWall key={`wall-${i}`} {...b} />)}
+                {floorBlocks.map((b, i) => <MergedFloor key={`floor-${i}`} {...b} />)}
                 {bedBlocks.map((b, i) => <MergedBed key={`bed-${i}`} {...b} grid={floor.grid} />)}
                 {tableBlocks.map((b, i) => <MergedTable key={`table-${i}`} {...b} />)}
                 {receptionBlocks.map((b, i) => <MergedReception key={`rec-${i}`} {...b} />)}
                 {windowBlocks.map((b, i) => <MergedWindow key={`win-${i}`} {...b} grid={floor.grid} />)}
                 {doorBlocks.map((b, i) => <MergedDoor key={`door-${i}`} {...b} grid={floor.grid} />)}
-                {elevatorBlocks.map((b, i) => <MergedElevator key={`ele-${i}`} {...b} />)}
+                {elevatorBlocks.map((b, i) => <MergedElevator key={`ele-${i}`} {...b} floorLevel={floor.level} floorIndex={floorIndex} />)}
                 {bathroomBlocks.map((b, i) => <MergedBathroom key={`bath-${i}`} {...b} />)}
                 {staffBlocks.map((b, i) => <MergedStaff key={`staff-${i}`} {...b} />)}
+
+                {/* Render Staff NPCs dynamically positioned on this active floor */}
+                {staff
+                  .filter(s => s.floorIndex === activeFloorIndex && s.x !== undefined && s.y !== undefined)
+                  .map(s => {
+                    const roleColors = {
+                      receptionist: { blazer: '#1e3a8a', pants: '#172554', tie: '#fbbf24', hair: '#1c1917', label: '#60a5fa' },
+                      cleaner: { blazer: '#1e293b', pants: '#0f172a', tie: '#475569', hair: '#7c2d12', label: '#94a3b8' },
+                      manager: { blazer: '#111827', pants: '#030712', tie: '#fbbf24', hair: '#451a03', label: '#fbbf24' }
+                    }[s.role] || { blazer: '#334155', pants: '#1e293b', tie: '#94a3b8', hair: '#000000', label: '#e2e8f0' };
+
+                    return (
+                      <group 
+                        key={s.id} 
+                        position={[
+                          s.x! * TILE_SIZE + TILE_SIZE / 2, 
+                          0.8, 
+                          s.y! * TILE_SIZE + TILE_SIZE / 2
+                        ]}
+                      >
+                        {/* Legs */}
+                        <mesh position={[-0.1, -0.5, 0]} castShadow>
+                          <cylinderGeometry args={[0.07, 0.07, 0.5, 8]} />
+                          <meshStandardMaterial color={roleColors.pants} roughness={0.7} />
+                        </mesh>
+                        <mesh position={[0.1, -0.5, 0]} castShadow>
+                          <cylinderGeometry args={[0.07, 0.07, 0.5, 8]} />
+                          <meshStandardMaterial color={roleColors.pants} roughness={0.7} />
+                        </mesh>
+
+                        {/* Shoes */}
+                        <mesh position={[-0.1, -0.76, 0.04]} castShadow>
+                          <boxGeometry args={[0.12, 0.08, 0.22]} />
+                          <meshStandardMaterial color="#0f172a" roughness={0.9} />
+                        </mesh>
+                        <mesh position={[0.1, -0.76, 0.04]} castShadow>
+                          <boxGeometry args={[0.12, 0.08, 0.22]} />
+                          <meshStandardMaterial color="#0f172a" roughness={0.9} />
+                        </mesh>
+
+                        {/* Torso / Blazer */}
+                        <mesh position={[0, -0.1, 0]} castShadow receiveShadow>
+                          <boxGeometry args={[0.42, 0.55, 0.26]} />
+                          <meshStandardMaterial 
+                            color={roleColors.blazer} 
+                            metalness={s.role === 'manager' ? 0.3 : 0} 
+                            roughness={0.5} 
+                          />
+                        </mesh>
+
+                        {/* Professional White Collar */}
+                        <mesh position={[0, 0.19, 0.02]} castShadow>
+                          <boxGeometry args={[0.22, 0.05, 0.16]} />
+                          <meshStandardMaterial color="#ffffff" roughness={0.4} />
+                        </mesh>
+
+                        {/* Role Tie / Bowtie */}
+                        <mesh position={[0, 0.1, 0.14]} rotation={[0.05, 0, 0]}>
+                          <coneGeometry args={[0.035, 0.14, 4]} />
+                          <meshStandardMaterial color={roleColors.tie} roughness={0.4} />
+                        </mesh>
+
+                        {/* Stylized Arms */}
+                        <mesh position={[-0.26, -0.1, 0]} rotation={[0, 0, 0.1]} castShadow>
+                          <cylinderGeometry args={[0.055, 0.045, 0.48, 8]} />
+                          <meshStandardMaterial color={roleColors.blazer} roughness={0.6} />
+                        </mesh>
+                        <mesh position={[0.26, -0.1, 0]} rotation={[0, 0, -0.1]} castShadow>
+                          <cylinderGeometry args={[0.055, 0.045, 0.48, 8]} />
+                          <meshStandardMaterial color={roleColors.blazer} roughness={0.6} />
+                        </mesh>
+
+                        {/* Head with Skin Tone */}
+                        <mesh position={[0, 0.4, 0]} castShadow>
+                          <sphereGeometry args={[0.2, 16, 16]} />
+                          <meshStandardMaterial color="#ffedd5" roughness={0.3} />
+                        </mesh>
+
+                        {/* Eyes */}
+                        <mesh position={[-0.07, 0.43, 0.16]}>
+                          <sphereGeometry args={[0.025, 8, 8]} />
+                          <meshStandardMaterial color="#0f172a" roughness={0.2} />
+                        </mesh>
+                        <mesh position={[0.07, 0.43, 0.16]}>
+                          <sphereGeometry args={[0.025, 8, 8]} />
+                          <meshStandardMaterial color="#0f172a" roughness={0.2} />
+                        </mesh>
+
+                        {/* Hair */}
+                        <mesh position={[0, 0.48, -0.04]} castShadow>
+                          <sphereGeometry args={[0.21, 12, 12]} />
+                          <meshStandardMaterial color={roleColors.hair} roughness={0.8} />
+                        </mesh>
+
+                        {/* Cleaner's Broom Tool */}
+                        {s.role === 'cleaner' && (
+                          <group position={[0.28, -0.15, 0.12]} rotation={[0.4, 0, -0.2]}>
+                            {/* Handle */}
+                            <mesh>
+                              <cylinderGeometry args={[0.02, 0.02, 1.1, 8]} />
+                              <meshStandardMaterial color="#b45309" roughness={0.7} />
+                            </mesh>
+                            {/* Brush head */}
+                            <mesh position={[0, -0.55, 0]}>
+                              <boxGeometry args={[0.22, 0.1, 0.12]} />
+                              <meshStandardMaterial color="#fcd34d" roughness={0.9} />
+                            </mesh>
+                          </group>
+                        )}
+
+                        {/* Manager's inspection notebook */}
+                        {s.role === 'manager' && (
+                          <mesh position={[-0.22, -0.12, 0.14]} rotation={[0.2, 0.5, 0.1]}>
+                            <boxGeometry args={[0.18, 0.22, 0.03]} />
+                            <meshStandardMaterial color="#9f1239" roughness={0.3} />
+                          </mesh>
+                        )}
+
+                        {/* Floating Text above staff member's head */}
+                        <Text
+                          position={[0, 1.5, 0]}
+                          fontSize={0.32}
+                          color={roleColors.label}
+                          anchorX="center"
+                          anchorY="middle"
+                          outlineWidth={0.03}
+                          outlineColor="#090d16"
+                        >
+                          {`${s.name} (${s.role.toUpperCase()})`}
+                        </Text>
+                        <Text
+                          position={[0, 1.12, 0]}
+                          fontSize={0.24}
+                          color="#cbd5e1"
+                          anchorX="center"
+                          anchorY="middle"
+                          outlineWidth={0.02}
+                          outlineColor="#090d16"
+                        >
+                          {s.currentTask ? `⚡ ${s.currentTask}` : '⚡ Idle'}
+                        </Text>
+                      </group>
+                    );
+                  })}
                 
                 {/* Render labels */}
                 {floor.labels?.map((label) => (
@@ -990,7 +1729,7 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
                 ))}
 
                 {/* Render guests for this floor */}
-                {guests.filter(g => g.floorIndex === floor.level).map(guest => {
+                {guests.filter(g => g.floorIndex === floorIndex || g.floorIndex === floor.level).map(guest => {
                   const vipEmojis = {
                     champagne: '🍾',
                     valet: '🤵',
@@ -1006,14 +1745,89 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
                         guest.y * TILE_SIZE + TILE_SIZE / 2
                       ]}
                     >
-                      <mesh castShadow receiveShadow>
-                        <cylinderGeometry args={[0.3, 0.3, 1.6, 16]} />
-                        <meshStandardMaterial color={guest.isVip ? "#f59e0b" : "#2563eb"} metalness={guest.isVip ? 0.7 : 0} roughness={guest.isVip ? 0.1 : 0.5} />
+                      {/* Realistic Trouser Legs */}
+                      <mesh position={[-0.1, -0.5, 0]} castShadow>
+                        <cylinderGeometry args={[0.07, 0.07, 0.5, 8]} />
+                        <meshStandardMaterial color={guest.isVip ? "#1e293b" : "#1e3a8a"} roughness={0.7} />
                       </mesh>
-                      <mesh position={[0, 1, 0]} castShadow>
-                        <sphereGeometry args={[0.3, 16, 16]} />
-                        <meshStandardMaterial color={guest.isVip ? "#fef08a" : "#fca5a5"} />
+                      <mesh position={[0.1, -0.5, 0]} castShadow>
+                        <cylinderGeometry args={[0.07, 0.07, 0.5, 8]} />
+                        <meshStandardMaterial color={guest.isVip ? "#1e293b" : "#1e3a8a"} roughness={0.7} />
                       </mesh>
+
+                      {/* Realistic Shoes */}
+                      <mesh position={[-0.1, -0.76, 0.04]} castShadow>
+                        <boxGeometry args={[0.12, 0.08, 0.22]} />
+                        <meshStandardMaterial color="#0f172a" roughness={0.9} />
+                      </mesh>
+                      <mesh position={[0.1, -0.76, 0.04]} castShadow>
+                        <boxGeometry args={[0.12, 0.08, 0.22]} />
+                        <meshStandardMaterial color="#0f172a" roughness={0.9} />
+                      </mesh>
+
+                      {/* Smart Torso / Suit Jacket */}
+                      <mesh position={[0, -0.1, 0]} castShadow receiveShadow>
+                        <boxGeometry args={[0.42, 0.55, 0.26]} />
+                        <meshStandardMaterial 
+                          color={guest.isVip ? "#d97706" : "#2563eb"} 
+                          metalness={guest.isVip ? 0.4 : 0} 
+                          roughness={guest.isVip ? 0.3 : 0.6} 
+                        />
+                      </mesh>
+
+                      {/* Stylish Suit Collar */}
+                      <mesh position={[0, 0.2, 0.02]} castShadow>
+                        <boxGeometry args={[0.22, 0.06, 0.16]} />
+                        <meshStandardMaterial color="#ffffff" roughness={0.4} />
+                      </mesh>
+
+                      {/* Red VIP Bowtie or Necktie */}
+                      {guest.isVip && (
+                        <mesh position={[0, 0.12, 0.14]} rotation={[0.1, 0, 0]}>
+                          <coneGeometry args={[0.045, 0.16, 4]} />
+                          <meshStandardMaterial color="#dc2626" roughness={0.4} />
+                        </mesh>
+                      )}
+
+                      {/* Stylized Arms */}
+                      <mesh position={[-0.26, -0.1, 0]} rotation={[0, 0, 0.15]} castShadow>
+                        <cylinderGeometry args={[0.055, 0.045, 0.48, 8]} />
+                        <meshStandardMaterial color={guest.isVip ? "#d97706" : "#2563eb"} roughness={0.6} />
+                      </mesh>
+                      <mesh position={[0.26, -0.1, 0]} rotation={[0, 0, -0.15]} castShadow>
+                        <cylinderGeometry args={[0.055, 0.045, 0.48, 8]} />
+                        <meshStandardMaterial color={guest.isVip ? "#d97706" : "#2563eb"} roughness={0.6} />
+                      </mesh>
+
+                      {/* Realistic Head with Skin Tone */}
+                      <mesh position={[0, 0.4, 0]} castShadow>
+                        <sphereGeometry args={[0.2, 16, 16]} />
+                        <meshStandardMaterial color={guest.isVip ? "#fed7aa" : "#ffedd5"} roughness={0.3} />
+                      </mesh>
+
+                      {/* Detailed Eyes looking forward */}
+                      <mesh position={[-0.07, 0.43, 0.16]}>
+                        <sphereGeometry args={[0.025, 8, 8]} />
+                        <meshStandardMaterial color="#0f172a" roughness={0.2} />
+                      </mesh>
+                      <mesh position={[0.07, 0.43, 0.16]}>
+                        <sphereGeometry args={[0.025, 8, 8]} />
+                        <meshStandardMaterial color="#0f172a" roughness={0.2} />
+                      </mesh>
+
+                      {/* Hair overlay */}
+                      <mesh position={[0, 0.48, -0.04]} castShadow>
+                        <sphereGeometry args={[0.21, 12, 12]} />
+                        <meshStandardMaterial color={guest.isVip ? "#451a03" : "#7c2d12"} roughness={0.8} />
+                      </mesh>
+
+                      {/* Majestic Royal Crown for VIP guests */}
+                      {guest.isVip && (
+                        <mesh position={[0, 0.62, 0]}>
+                          <cylinderGeometry args={[0.14, 0.1, 0.14, 8, 1, true]} />
+                          <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
+                        </mesh>
+                      )}
                       <Text
                         position={[0, 1.6, 0]}
                         fontSize={0.4}
@@ -1068,6 +1882,180 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
           })}
         </group>
       </Canvas>
+
+      {/* KONE POLARIS DCS INTERACTIVE HUD PORTAL */}
+      {konePortalOpen && (
+        <div id="kone-polaris-modal" className="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-slate-900 border-2 border-slate-750 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left">
+            {/* Header branding */}
+            <div className="bg-gradient-to-r from-slate-950 to-slate-900 p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                    KONE Polaris DCS
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-mono">Destination Control System • v4.8</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setKonePortalOpen(false);
+                  stopElevatorMusic();
+                  setKoneMusicChannel('none');
+                }}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Main Interactive Screen */}
+            <div className="p-5 flex-1 flex flex-col gap-5">
+              {/* Telemetry Display */}
+              <div className="bg-slate-950 border border-slate-850 p-3.5 rounded-xl font-mono text-[11px] text-slate-300 flex flex-col gap-2 relative overflow-hidden">
+                <div className="absolute right-2 top-2 text-[9px] text-emerald-500/30 font-black tracking-widest flex items-center gap-1">
+                  <Activity size={10} className="animate-pulse" />
+                  <span>LIVE COUPLING</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <div>CURRENT FLOOR: <span className="text-emerald-400 font-bold">{floors[koneOriginFloor]?.name ? floors[koneOriginFloor].name.split(':')[0] : `Floor ${koneOriginFloor + 1}`}</span></div>
+                  <div>TARGET FLOOR: <span className="text-blue-400 font-bold">{floors[koneTargetFloor]?.name ? floors[koneTargetFloor].name.split(':')[0] : `Floor ${koneTargetFloor + 1}`}</span></div>
+                  <div>DISPATCH STATUS: <span className={`font-black ${koneStatus === 'transit' ? 'text-amber-400 animate-pulse' : koneStatus === 'arrived' ? 'text-emerald-400' : 'text-slate-400'}`}>{koneStatus.toUpperCase()}</span></div>
+                  <div>CABIN ASSIGNED: <span className="text-amber-500 font-bold">{koneStatus === 'idle' ? 'STANDBY' : `CABIN ${koneCabin}`}</span></div>
+                </div>
+
+                {/* Simulated Shaft Graphic */}
+                <div className="mt-2.5 border-t border-slate-900 pt-2.5 flex items-center justify-between">
+                  <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden flex">
+                    <div 
+                      className={`h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000 ${isElevatorMoving ? 'w-1/2 animate-pulse' : 'w-full'}`} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status/Logs Terminal */}
+              <div className="flex-1 min-h-[100px] bg-slate-950 border border-slate-850 p-3.5 rounded-xl flex flex-col gap-1.5 overflow-y-auto max-h-[140px] font-mono text-[10px]">
+                {koneStatus === 'dispatching' && (
+                  <div className="flex flex-col gap-1 text-amber-500">
+                    {dispatchLogs.map((log, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <span className="animate-spin text-amber-500">⏳</span>
+                        <span>{log}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {koneStatus !== 'dispatching' && koneVoiceLog.map((log, i) => (
+                  <div key={i} className={`text-slate-400 border-l-2 pl-2 ${i === 0 ? 'text-emerald-400 border-emerald-500 font-bold' : 'border-slate-800'}`}>
+                    {log}
+                  </div>
+                ))}
+              </div>
+
+              {/* Floor Selection Grid (Polaris Target UI) */}
+              {koneStatus === 'idle' && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Destination Floor:</span>
+                  <div className="grid grid-cols-4 gap-2">
+                    {floors.map((floor, floorIndex) => {
+                      const isCurrent = floorIndex === koneOriginFloor;
+                      const labelText = floor.name 
+                        ? (floor.name.includes('Floor') ? floor.name.split(':')[0].replace('Floor ', '') + 'F' : floor.name.split(':')[0]) 
+                        : `${floor.level + 1}F`;
+                      return (
+                        <button
+                          key={floorIndex}
+                          onClick={() => handleSelectDestination(floorIndex)}
+                          className={`py-3.5 px-2 rounded-xl border font-mono font-black text-xs flex flex-col items-center justify-center transition-all cursor-pointer ${
+                            isCurrent
+                              ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
+                              : 'bg-slate-900 hover:bg-slate-850 border-slate-850 hover:border-slate-750 text-white active:scale-95'
+                          }`}
+                          disabled={isCurrent}
+                        >
+                          <span className="truncate max-w-full">{labelText}</span>
+                          <span className="text-[8px] font-normal text-slate-500 mt-1">
+                            {isCurrent ? 'Current' : 'Select'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Transit Screen */}
+              {koneStatus === 'transit' && (
+                <div className="flex-1 flex flex-col items-center justify-center py-6 text-center gap-3">
+                  <div className="relative w-14 h-14 rounded-full border-4 border-slate-800 border-t-amber-500 animate-spin flex items-center justify-center">
+                    <span className="font-mono text-xs font-black text-amber-500">{koneCabin}</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider animate-pulse">Transit In Progress</h4>
+                    <p className="text-xs text-slate-400 mt-1">Please stand clear of the sliding doors.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Arrived Screen */}
+              {koneStatus === 'arrived' && (
+                <div className="flex-1 flex flex-col items-center justify-center py-4 text-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                    <span className="font-bold text-xl">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Arrived on {floors[koneTargetFloor]?.name ? floors[koneTargetFloor].name.split(':')[0] : `Floor ${koneTargetFloor + 1}`}</h4>
+                    <p className="text-xs text-slate-400 mt-1">DCS dispatch cycle complete.</p>
+                  </div>
+                  <button
+                    onClick={() => setKoneStatus('idle')}
+                    className="mt-2 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-white px-4 py-2 rounded-lg transition-all cursor-pointer font-bold"
+                  >
+                    Select Another Floor
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Controls Panel (Emergency Stop, Audio channels) */}
+            <div className="bg-slate-950 p-4 border-t border-slate-850 flex items-center justify-between">
+              {/* Elevator Audio Playlist switcher */}
+              <div className="flex items-center gap-2">
+                <Music size={14} className="text-slate-400" />
+                <span className="text-[10px] font-mono text-slate-400 uppercase mr-1">Music:</span>
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-0.5 flex gap-1">
+                  <button
+                    onClick={() => setKoneMusicChannel('none')}
+                    className={`px-2 py-1 text-[9px] font-bold rounded transition-all cursor-pointer uppercase ${koneMusicChannel === 'none' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    Mute
+                  </button>
+                  <button
+                    onClick={() => setKoneMusicChannel('lounge')}
+                    className={`px-2 py-1 text-[9px] font-bold rounded transition-all cursor-pointer uppercase ${koneMusicChannel === 'lounge' ? 'bg-amber-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    Jazz
+                  </button>
+                </div>
+              </div>
+
+              {/* EMERGENCY ALARM */}
+              <button
+                onClick={() => {
+                  triggerEmergencyAlarm();
+                  addVoiceLog("WARNING: Emergency Alarm broadcast active.");
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer hover:shadow-lg active:scale-95"
+              >
+                <ShieldAlert size={12} />
+                <span>Alarm</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
