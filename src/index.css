@@ -1,8 +1,50 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;750;800&family=JetBrains+Mono:wght@400;550;700&family=Outfit:wght@400;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Refined neutral ramp — warmer slate for a premium feel */
+  --color-surface-0: #0a0e14;
+  --color-surface-1: #0f1620;
+  --color-surface-2: #151d2b;
+  --color-surface-3: #1c2638;
+
+  /* Primary — deep teal (not purple/indigo) */
+  --color-brand-50: #effcf6;
+  --color-brand-100: #d8f7e9;
+  --color-brand-200: #b3eed4;
+  --color-brand-300: #7eddb8;
+  --color-brand-400: #43c397;
+  --color-brand-500: #1fa87c;
+  --color-brand-600: #128565;
+  --color-brand-700: #0f6650;
+  --color-brand-800: #105141;
+  --color-brand-900: #114238;
+
+  /* Accent — warm amber gold for CTAs and highlights */
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #d97706;
 }
+
+/* Smooth scrollbar styling */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1c2638; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2a3a52; }
+
+/* Subtle entrance animation utility */
+@keyframes fade-slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-slide-up { animation: fade-slide-up 0.3s ease-out; }
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 8s linear infinite; }

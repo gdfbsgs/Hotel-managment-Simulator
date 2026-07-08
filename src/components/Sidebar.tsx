@@ -2,26 +2,7 @@ import React from 'react';
 import { useHotelStore } from '../store';
 import { TileType } from '../types';
 import { Tooltip } from './Tooltip';
-import { 
-  Square, 
-  Grid, 
-  DoorClosed, 
-  AppWindow, 
-  Bed, 
-  Briefcase, 
-  Trees, 
-  Coffee,
-  Eraser,
-  Plus,
-  Trash2,
-  Type,
-  ArrowUpDown,
-  Bath,
-  Users,
-  Save,
-  Copy,
-  Flame
-} from 'lucide-react';
+import { Square, Grid2x2 as Grid, DoorClosed, AppWindow, Bed, Briefcase, Trees, Coffee, Eraser, Plus, Trash2, Type, ArrowUpDown, Bath, Users, Save, Copy, Flame } from 'lucide-react';
 
 const tools: { type: TileType | 'eraser' | 'text'; icon: React.FC<any>; label: string; color: string; description: string }[] = [
   { type: 'floor', icon: Grid, label: 'Floor', color: 'text-slate-400', description: 'Construct floors. Guests need them to walk on and for placing other furniture.' },
@@ -61,11 +42,11 @@ export const Sidebar: React.FC = () => {
   const [isSaving, setIsSaving] = React.useState(false);
 
   return (
-    <aside className="w-64 border-r border-slate-900 bg-slate-950 flex flex-col shrink-0 h-full text-slate-100 shadow-2xl">
-      <div className="p-4 border-b border-slate-900 flex-1 overflow-y-auto scrollbar-none">
+    <aside className="w-64 border-r border-[#1c2638] bg-[#0a0e14] flex flex-col shrink-0 h-full text-slate-100 shadow-2xl">
+      <div className="p-4 border-b border-[#1c2638] flex-1 overflow-y-auto scrollbar-none">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3.5 flex items-center justify-between font-display">
           <span>OBJECT LIBRARY</span>
-          <span className="text-[9px] font-semibold text-sky-400 normal-case bg-sky-950/40 px-2 py-0.5 rounded border border-sky-900/30">Guides active</span>
+          <span className="text-[9px] font-semibold text-[#43c397] normal-case bg-[#1fa87c]/10 px-2 py-0.5 rounded border border-[#1fa87c]/20">Guides active</span>
         </h3>
         <div className="grid grid-cols-2 gap-2">
           {tools.map((tool) => {
@@ -77,12 +58,12 @@ export const Sidebar: React.FC = () => {
                   onClick={() => setSelectedTool(tool.type)}
                   className={`w-full aspect-[4/3] rounded-xl flex flex-col items-center justify-center p-2 transition-all border cursor-pointer select-none ${
                     isActive 
-                      ? 'bg-amber-500/10 border-amber-500/50 ring-2 ring-amber-500/10 text-amber-500 font-extrabold shadow-md shadow-amber-500/5' 
-                      : 'bg-slate-900/30 border-slate-900 hover:bg-slate-900/60 hover:border-slate-800 text-slate-300'
+                      ? 'bg-[#1fa87c]/10 border-[#1fa87c]/50 ring-2 ring-[#1fa87c]/10 text-[#43c397] font-extrabold shadow-md shadow-[#1fa87c]/5' 
+                      : 'bg-[#151d2b]/40 border-[#1c2638] hover:bg-[#151d2b]/70 hover:border-[#2a3a52] text-slate-300'
                   }`}
                 >
-                  <Icon size={18} className={`mb-1.5 ${isActive ? 'text-amber-500 scale-110' : tool.color} transition-transform duration-200`} strokeWidth={isActive ? 2.5 : 2} />
-                  <span className={`text-[9px] font-bold tracking-wide ${isActive ? 'text-amber-500' : 'text-slate-400'}`}>{tool.label}</span>
+                  <Icon size={18} className={`mb-1.5 ${isActive ? 'text-[#43c397] scale-110' : tool.color} transition-transform duration-200`} strokeWidth={isActive ? 2.5 : 2} />
+                  <span className={`text-[9px] font-bold tracking-wide ${isActive ? 'text-[#43c397]' : 'text-slate-400'}`}>{tool.label}</span>
                 </button>
               </Tooltip>
             );
@@ -90,8 +71,8 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {selectedTool === 'elevator' && (
-          <div className="mt-4 p-3 bg-purple-950/15 border border-purple-500/20 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1">
-            <div className="flex items-center gap-1.5 text-xs font-black uppercase text-purple-400 font-mono">
+          <div className="mt-4 p-3 bg-[#1fa87c]/10 border border-[#1fa87c]/20 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1">
+            <div className="flex items-center gap-1.5 text-xs font-black uppercase text-[#43c397] font-mono">
               <ArrowUpDown size={12} />
               <span>Elevator System Setup</span>
             </div>
@@ -103,8 +84,8 @@ export const Sidebar: React.FC = () => {
                 onClick={() => setElevatorSystemMode('standard')}
                 className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase border transition-all cursor-pointer ${
                   elevatorSystemMode === 'standard'
-                    ? 'bg-purple-500 text-zinc-950 border-purple-400 font-black shadow-md shadow-purple-500/10'
-                    : 'bg-slate-900 border-slate-850 text-slate-400 hover:text-white'
+                    ? 'bg-[#1fa87c] text-white border-[#43c397] font-black shadow-md shadow-[#1fa87c]/10'
+                    : 'bg-[#151d2b] border-[#1c2638] text-slate-400 hover:text-white'
                 }`}
               >
                 Standard
@@ -113,8 +94,8 @@ export const Sidebar: React.FC = () => {
                 onClick={() => setElevatorSystemMode('dcs')}
                 className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase border transition-all cursor-pointer ${
                   elevatorSystemMode === 'dcs'
-                    ? 'bg-purple-500 text-zinc-950 border-purple-400 font-black shadow-md shadow-purple-500/10'
-                    : 'bg-slate-900 border-slate-850 text-slate-400 hover:text-white'
+                    ? 'bg-[#1fa87c] text-white border-[#43c397] font-black shadow-md shadow-[#1fa87c]/10'
+                    : 'bg-[#151d2b] border-[#1c2638] text-slate-400 hover:text-white'
                 }`}
               >
                 KONE DCS
@@ -129,7 +110,7 @@ export const Sidebar: React.FC = () => {
             <Tooltip content="Adds a new floor level. Connect levels using Elevators to scale your operations." position="bottom">
               <button 
                 onClick={addFloor}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-[10px] font-bold hover:bg-amber-500/20 hover:text-amber-300 transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-[#1fa87c]/10 text-[#43c397] border border-[#1fa87c]/20 rounded-lg text-[10px] font-bold hover:bg-[#1fa87c]/20 hover:text-[#7eddb8] transition-colors cursor-pointer"
               >
                 <Plus size={12} /> Add Level
               </button>
@@ -140,18 +121,18 @@ export const Sidebar: React.FC = () => {
             <div className="flex items-center gap-2 text-xs p-1.5 rounded text-slate-400">
               <span className="font-extrabold uppercase tracking-wider text-[9px] text-slate-500 font-mono">ArchHotel Structure</span>
             </div>
-            <div className="ml-2 border-l border-slate-900 space-y-1.5 py-1">
+            <div className="ml-2 border-l border-[#1c2638] space-y-1.5 py-1">
               {floors.map((floor, index) => (
                 <div
                   key={floor.level}
                   onClick={() => setActiveFloor(index)}
                   className={`flex items-center gap-2 text-xs p-2 rounded-lg cursor-pointer transition-all ${
                     activeFloorIndex === index 
-                      ? 'bg-amber-500/10 text-amber-500 font-extrabold border-l-2 border-amber-500 pl-2 shadow-sm shadow-amber-500/5' 
-                      : 'hover:bg-slate-900/40 text-slate-400 hover:text-white pl-1.5'
+                      ? 'bg-[#1fa87c]/10 text-[#43c397] font-extrabold border-l-2 border-[#1fa87c] pl-2 shadow-sm shadow-[#1fa87c]/5' 
+                      : 'hover:bg-[#151d2b]/40 text-slate-400 hover:text-white pl-1.5'
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${activeFloorIndex === index ? 'bg-amber-500 animate-pulse' : 'bg-slate-700'}`}></span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${activeFloorIndex === index ? 'bg-[#1fa87c] animate-pulse' : 'bg-slate-700'}`}></span>
                   <span className="truncate font-medium">{floor.name || `Level ${floor.level}`}</span>
                 </div>
               ))}
@@ -160,7 +141,7 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Floor Configurations */}
-        <div className="mt-6 border-t border-slate-900 pt-5">
+        <div className="mt-6 border-t border-[#1c2638] pt-5">
           <div className="flex items-center justify-between mb-3.5">
             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-display">FLOOR TEMPLATES</h3>
             <Tooltip content="Save the current active floor layout as a reusable template." position="bottom">
@@ -181,27 +162,27 @@ export const Sidebar: React.FC = () => {
                 setNewTemplateName('');
                 setIsSaving(false);
               }
-            }} className="mb-3 space-y-2 bg-zinc-900 p-2 rounded-xl border border-zinc-800">
+            }} className="mb-3 space-y-2 bg-[#151d2b] p-2 rounded-xl border border-[#1c2638]">
               <input 
                 type="text" 
                 placeholder="Template name (e.g. Lobby 2D)" 
                 value={newTemplateName}
                 onChange={(e) => setNewTemplateName(e.target.value)}
-                className="w-full text-xs px-2.5 py-2 border border-zinc-800 rounded-lg focus:outline-none focus:border-amber-500 bg-zinc-950 text-white"
+                className="w-full text-xs px-2.5 py-2 border border-[#1c2638] rounded-lg focus:outline-none focus:border-[#1fa87c] bg-[#0a0e14] text-white"
                 autoFocus
               />
               <div className="flex gap-1.5 justify-end">
                 <button 
                   type="button" 
                   onClick={() => setIsSaving(false)}
-                  className="px-2.5 py-1 text-[10px] text-zinc-400 hover:bg-zinc-800 rounded"
+                  className="px-2.5 py-1 text-[10px] text-slate-400 hover:bg-[#1c2638] rounded"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={!newTemplateName.trim()}
-                  className="px-2.5 py-1 text-[10px] bg-amber-500 text-zinc-950 hover:bg-amber-600 disabled:opacity-50 rounded font-black shadow-lg shadow-amber-500/10"
+                  className="px-2.5 py-1 text-[10px] bg-[#fbbf24] text-[#0a0e14] hover:bg-[#d97706] disabled:opacity-50 rounded font-black shadow-lg shadow-[#fbbf24]/10"
                 >
                   Save
                 </button>
@@ -213,7 +194,7 @@ export const Sidebar: React.FC = () => {
             {floorTemplates.map((template) => (
               <div 
                 key={template.id} 
-                className="group relative flex items-center justify-between p-2.5 border border-slate-900 rounded-xl bg-slate-900/10 hover:bg-amber-500/5 hover:border-amber-500/30 transition-all text-left"
+                className="group relative flex items-center justify-between p-2.5 border border-[#1c2638] rounded-xl bg-[#151d2b]/10 hover:bg-[#1fa87c]/5 hover:border-[#1fa87c]/30 transition-all text-left"
               >
                 <Tooltip content={template.description || "Click to load layout onto the active floor"} className="flex-1" position="right">
                   <button
@@ -256,7 +237,7 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-4 bg-slate-950 border-t border-slate-900 shrink-0">
+      <div className="p-4 bg-[#0a0e14] border-t border-[#1c2638] shrink-0">
         <Tooltip content="WARNING: Wipes all floors, hires, and configurations, starting fresh from Ground Floor." className="w-full">
           <button 
             onClick={() => {

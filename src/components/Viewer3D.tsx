@@ -1281,46 +1281,338 @@ const TileModel = ({ type, position }: { type: TileType; position: [number, numb
   }
 };
 
-const EnvironmentScenery: React.FC<{ sceneryTheme?: 'city' | 'beach' | 'mountain' | 'forest' | 'desert' }> = ({ sceneryTheme = 'city' }) => {
-  // We can render random scenic elements scattered around the hotel
-  // Let's seed random coords so they remain static on re-renders
+// Theme-specific scene configuration: sky, lighting, fog, and ground colors.
+type SceneryTheme = 'city' | 'beach' | 'mountain' | 'forest' | 'desert';
+
+const SCENERY_THEMES: Record<SceneryTheme, {
+  sky: { sunPosition: [number, number, number]; turbidity: number; rayleigh: number };
+  ambient: { intensity: number; color: string };
+  directional: { intensity: number; color: string };
+  fog: { color: string; near: number; far: number };
+  ground: string;
+}> = {
+  city: {
+    sky: { sunPosition: [100, 30, 100], turbidity: 0.1, rayleigh: 0.5 },
+    ambient: { intensity: 0.45, color: '#cbd5e1' },
+    directional: { intensity: 1.4, color: '#fffbeb' },
+    fog: { color: '#1e293b', near: 60, far: 180 },
+    ground: '#1e293b',
+  },
+  beach: {
+    sky: { sunPosition: [80, 18, 60], turbidity: 1.5, rayleigh: 1.2 },
+    ambient: { intensity: 0.6, color: '#fef3c7' },
+    directional: { intensity: 1.6, color: '#fde68a' },
+    fog: { color: '#bae6fd', near: 70, far: 220 },
+    ground: '#fcd34d',
+  },
+  mountain: {
+    sky: { sunPosition: [120, 25, 80], turbidity: 0.5, rayleigh: 0.8 },
+    ambient: { intensity: 0.5, color: '#e0f2fe' },
+    directional: { intensity: 1.5, color: '#ffffff' },
+    fog: { color: '#cbd5e1', near: 80, far: 240 },
+    ground: '#334155',
+  },
+  forest: {
+    sky: { sunPosition: [60, 22, 40], turbidity: 0.8, rayleigh: 1.0 },
+    ambient: { intensity: 0.4, color: '#dcfce7' },
+    directional: { intensity: 1.2, color: '#ecfccb' },
+    fog: { color: '#14532d', near: 50, far: 160 },
+    ground: '#166534',
+  },
+  desert: {
+    sky: { sunPosition: [100, 8, 10], turbidity: 2.5, rayleigh: 2.0 },
+    ambient: { intensity: 0.5, color: '#ffedd5' },
+    directional: { intensity: 1.7, color: '#f97316' },
+    fog: { color: '#fbbf24', near: 80, far: 240 },
+    ground: '#d97706',
+  },
+};
+
+// Animated ocean surface with gentle vertex wave displacement.
+const AnimatedOcean: React.FC = () => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const geomRef = useRef<THREE.PlaneGeometry>(null);
+
+  useFrame((state) => {
+    if (!geomRef.current) return;
+    const t = state.clock.elapsedTime;
+    const pos = geomRef.current.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const wave = Math.sin(x * 0.08 + t * 0.8) * 0.35 + Math.cos(y * 0.06 + t * 0.6) * 0.25;
+      pos.setZ(i, wave);
+    }
+    pos.needsUpdate = true;
+    geomRef.current.computeVertexNormals();
+  });
+
+  return (
+    <mesh ref={meshRef} position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry ref={geomRef as any} args={[500, 500, 48, 48]} />
+      <meshStandardMaterial color="#0ea5e9" transparent opacity={0.78} roughness={0.08} metalness={0.3} />
+    </mesh>
+  );
+};
+
+// Drifting volumetric cloud puffs that slowly translate across the sky.
+const CloudLayer: React.FC<{ count?: number; color?: string; height?: number }> = ({ count = 14, color = '#f8fafc', height = 38 }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const clouds = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.3;
+      const distance = 50 + Math.random() * 60;
+      items.push({
+        x: Math.cos(angle) * distance,
+        z: Math.sin(angle) * distance,
+        scale: 3 + Math.random() * 5,
+        speed: 0.3 + Math.random() * 0.5,
+        offset: Math.random() * Math.PI * 2,
+      });
+    }
+    return items;
+  }, [count]);
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    const t = state.clock.elapsedTime;
+    groupRef.current.children.forEach((child, i) => {
+      const c = clouds[i];
+      child.position.x = c.x + Math.sin(t * c.speed * 0.1 + c.offset) * 8;
+      child.position.z = c.z + Math.cos(t * c.speed * 0.08 + c.offset) * 6;
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {clouds.map((c, i) => (
+        <group key={i} position={[c.x, height, c.z]} scale={[c.scale, c.scale * 0.5, c.scale]}>
+          <mesh>
+            <sphereGeometry args={[1, 10, 8]} />
+            <meshStandardMaterial color={color} transparent opacity={0.55} roughness={1} />
+          </mesh>
+          <mesh position={[0.7, 0.1, 0.2]} scale={[0.8, 0.7, 0.8]}>
+            <sphereGeometry args={[1, 10, 8]} />
+            <meshStandardMaterial color={color} transparent opacity={0.5} roughness={1} />
+          </mesh>
+          <mesh position={[-0.6, 0, -0.1]} scale={[0.7, 0.6, 0.7]}>
+            <sphereGeometry args={[1, 10, 8]} />
+            <meshStandardMaterial color={color} transparent opacity={0.5} roughness={1} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+};
+
+// A single detailed palm tree with curved trunk and fronds.
+const PalmTree: React.FC<{ x: number; z: number; scale: number }> = ({ x, z, scale }) => {
+  const fronds = React.useMemo(() => {
+    const items = [];
+    const count = 7;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      items.push({ angle, len: 1.6 + Math.random() * 0.4 });
+    }
+    return items;
+  }, []);
+
+  return (
+    <group position={[x, 0, z]} scale={[scale, scale, scale]}>
+      {/* Curved trunk segments */}
+      <mesh position={[0, 1.2, 0]} rotation={[0, 0, 0.05]}>
+        <cylinderGeometry args={[0.13, 0.22, 2.4, 8]} />
+        <meshStandardMaterial color="#92400e" roughness={0.9} />
+      </mesh>
+      <mesh position={[0.12, 2.5, 0]} rotation={[0, 0, 0.18]}>
+        <cylinderGeometry args={[0.1, 0.14, 1.8, 8]} />
+        <meshStandardMaterial color="#78350f" roughness={0.9} />
+      </mesh>
+      {/* Fronds */}
+      <group position={[0.25, 3.4, 0]}>
+        {fronds.map((f, i) => (
+          <mesh key={i} rotation={[0.5, f.angle, 0]} position={[Math.cos(f.angle) * 0.1, 0, Math.sin(f.angle) * 0.1]}>
+            <coneGeometry args={[0.35, f.len, 5]} />
+            <meshStandardMaterial color="#15803d" roughness={0.7} side={THREE.DoubleSide} />
+          </mesh>
+        ))}
+        {/* Coconuts */}
+        <mesh position={[0, -0.15, 0.15]}>
+          <sphereGeometry args={[0.12, 8, 8]} />
+          <meshStandardMaterial color="#78350f" roughness={0.8} />
+        </mesh>
+      </group>
+    </group>
+  );
+};
+
+// A layered pine tree with multiple cone tiers.
+const PineTree: React.FC<{ x: number; z: number; scale: number; snowy?: boolean }> = ({ x, z, scale, snowy }) => {
+  return (
+    <group position={[x, 0, z]} scale={[scale, scale, scale]}>
+      <mesh position={[0, 0.8, 0]}>
+        <cylinderGeometry args={[0.1, 0.16, 1.6, 6]} />
+        <meshStandardMaterial color={snowy ? '#475569' : '#451a03'} roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 1.7, 0]}>
+        <coneGeometry args={[0.75, 1.5, 7]} />
+        <meshStandardMaterial color={snowy ? '#0f766e' : '#065f46'} flatShading roughness={0.8} />
+      </mesh>
+      <mesh position={[0, 2.4, 0]}>
+        <coneGeometry args={[0.55, 1.2, 7]} />
+        <meshStandardMaterial color={snowy ? '#0d9488' : '#047857'} flatShading roughness={0.8} />
+      </mesh>
+      <mesh position={[0, 3.0, 0]}>
+        <coneGeometry args={[0.38, 0.9, 7]} />
+        <meshStandardMaterial color={snowy ? '#14b8a6' : '#059669'} flatShading roughness={0.8} />
+      </mesh>
+      {snowy && (
+        <mesh position={[0, 1.95, 0]}>
+          <coneGeometry args={[0.76, 0.4, 7]} />
+          <meshStandardMaterial color="#f8fafc" roughness={0.6} />
+        </mesh>
+      )}
+    </group>
+  );
+};
+
+// A rounded deciduous tree with a fuller canopy.
+const RoundTree: React.FC<{ x: number; z: number; scale: number; height: number }> = ({ x, z, scale, height }) => {
+  return (
+    <group position={[x, 0, z]} scale={[scale, scale, scale]}>
+      <mesh position={[0, height / 2, 0]}>
+        <cylinderGeometry args={[0.15, 0.24, height, 8]} />
+        <meshStandardMaterial color="#451a03" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, height + 0.5, 0]}>
+        <sphereGeometry args={[1.2, 10, 10]} />
+        <meshStandardMaterial color="#166534" roughness={0.85} flatShading />
+      </mesh>
+      <mesh position={[0.5, height + 1.0, -0.2]} scale={[0.8, 0.8, 0.8]}>
+        <sphereGeometry args={[1.0, 10, 10]} />
+        <meshStandardMaterial color="#15803d" roughness={0.85} flatShading />
+      </mesh>
+      <mesh position={[-0.4, height + 0.8, 0.3]} scale={[0.7, 0.7, 0.7]}>
+        <sphereGeometry args={[0.9, 10, 10]} />
+        <meshStandardMaterial color="#14532d" roughness={0.85} flatShading />
+      </mesh>
+    </group>
+  );
+};
+
+// A saguaro cactus with arms.
+const Cactus: React.FC<{ x: number; z: number; scale: number }> = ({ x, z, scale }) => {
+  return (
+    <group position={[x, 0, z]} scale={[scale, scale, scale]}>
+      <mesh position={[0, 1.5, 0]}>
+        <cylinderGeometry args={[0.2, 0.24, 3, 8]} />
+        <meshStandardMaterial color="#15803d" roughness={0.9} />
+      </mesh>
+      <group position={[0, 1.8, 0]}>
+        <mesh position={[0.45, 0.4, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.13, 0.15, 0.9, 8]} />
+          <meshStandardMaterial color="#16a34a" roughness={0.9} />
+        </mesh>
+        <mesh position={[0.85, 0.9, 0]}>
+          <cylinderGeometry args={[0.13, 0.14, 1.2, 8]} />
+          <meshStandardMaterial color="#16a34a" roughness={0.9} />
+        </mesh>
+      </group>
+      <group position={[0, 1.2, 0]} rotation={[0, Math.PI, 0]}>
+        <mesh position={[0.4, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.12, 0.14, 0.8, 8]} />
+          <meshStandardMaterial color="#16a34a" roughness={0.9} />
+        </mesh>
+        <mesh position={[0.75, 1.0, 0]}>
+          <cylinderGeometry args={[0.12, 0.13, 1.0, 8]} />
+          <meshStandardMaterial color="#16a34a" roughness={0.9} />
+        </mesh>
+      </group>
+    </group>
+  );
+};
+
+// A skyscraper with emissive window grid texture for the city skyline.
+const CityBuilding: React.FC<{ x: number; z: number; width: number; height: number; depth: number; color: string }> = ({ x, z, width, height, depth, color }) => {
+  const windowTexture = React.useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return new THREE.CanvasTexture(canvas);
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 64, 256);
+    // Window grid
+    for (let row = 0; row < 20; row++) {
+      for (let col = 0; col < 4; col++) {
+        const lit = Math.random() > 0.4;
+        ctx.fillStyle = lit ? '#fde68a' : '#0f172a';
+        ctx.fillRect(col * 16 + 3, row * 12 + 3, 10, 7);
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }, [color]);
+
+  return (
+    <group position={[x, 0, z]}>
+      {/* Main tower */}
+      <mesh position={[0, height / 2 - 0.1, 0]} castShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <meshStandardMaterial map={windowTexture} roughness={0.4} metalness={0.3} emissive="#fbbf24" emissiveIntensity={0.08} />
+      </mesh>
+      {/* Rooftop antenna for taller buildings */}
+      {height > 30 && (
+        <mesh position={[0, height + 1.5, 0]}>
+          <cylinderGeometry args={[0.05, 0.08, 3, 6]} />
+          <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+        </mesh>
+      )}
+    </group>
+  );
+};
+
+const EnvironmentScenery: React.FC<{ sceneryTheme?: SceneryTheme }> = ({ sceneryTheme = 'city' }) => {
   const cityBuildings = React.useMemo(() => {
     const buildings = [];
-    for (let i = 0; i < 35; i++) {
-      const angle = (i / 35) * Math.PI * 2 + (Math.random() - 0.5) * 0.1;
-      const distance = 45 + Math.random() * 40;
+    for (let i = 0; i < 40; i++) {
+      const angle = (i / 40) * Math.PI * 2 + (Math.random() - 0.5) * 0.1;
+      const distance = 45 + Math.random() * 45;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
-      const width = 4 + Math.random() * 6;
-      const height = 15 + Math.random() * 35;
-      const depth = 4 + Math.random() * 6;
-      const hue = Math.random() * 30 + 200; // Blueish skyscraper lights
-      buildings.push({ x, z, width, height, depth, color: `hsl(${hue}, 20%, 30%)` });
+      const width = 4 + Math.random() * 7;
+      const height = 15 + Math.random() * 40;
+      const depth = 4 + Math.random() * 7;
+      const hue = Math.random() * 25 + 200;
+      buildings.push({ x, z, width, height, depth, color: `hsl(${hue}, 18%, 28%)` });
     }
     return buildings;
   }, []);
 
   const palms = React.useMemo(() => {
     const items = [];
-    for (let i = 0; i < 25; i++) {
-      const angle = (i / 25) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
-      const distance = 25 + Math.random() * 15;
+    for (let i = 0; i < 28; i++) {
+      const angle = (i / 28) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+      const distance = 24 + Math.random() * 18;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
-      items.push({ x, z, scale: 0.6 + Math.random() * 0.8 });
+      items.push({ x, z, scale: 0.6 + Math.random() * 0.7 });
     }
     return items;
   }, []);
 
   const mountains = React.useMemo(() => {
     const items = [];
-    for (let i = 0; i < 12; i++) {
-      const angle = (i / 12) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
-      const distance = 60 + Math.random() * 30;
+    for (let i = 0; i < 14; i++) {
+      const angle = (i / 14) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+      const distance = 60 + Math.random() * 35;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
-      const height = 25 + Math.random() * 25;
-      const radius = 12 + Math.random() * 10;
+      const height = 28 + Math.random() * 28;
+      const radius = 13 + Math.random() * 12;
       items.push({ x, z, height, radius });
     }
     return items;
@@ -1328,9 +1620,9 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: 'city' | 'beach' | 'mountain
 
   const forestTrees = React.useMemo(() => {
     const items = [];
-    for (let i = 0; i < 60; i++) {
-      const angle = (i / 60) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-      const distance = 24 + Math.random() * 35;
+    for (let i = 0; i < 70; i++) {
+      const angle = (i / 70) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+      const distance = 22 + Math.random() * 38;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
       items.push({ x, z, height: 2 + Math.random() * 3, scale: 0.7 + Math.random() * 0.6 });
@@ -1340,12 +1632,12 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: 'city' | 'beach' | 'mountain
 
   const desertDunes = React.useMemo(() => {
     const items = [];
-    for (let i = 0; i < 15; i++) {
-      const angle = (i / 15) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-      const distance = 30 + Math.random() * 35;
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const distance = 28 + Math.random() * 38;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
-      items.push({ x, z, rx: 15 + Math.random() * 15, rz: 8 + Math.random() * 8, h: 2 + Math.random() * 2 });
+      items.push({ x, z, rx: 16 + Math.random() * 16, rz: 9 + Math.random() * 9, h: 2 + Math.random() * 2.5 });
     }
     return items;
   }, []);
@@ -1353,27 +1645,15 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: 'city' | 'beach' | 'mountain
   if (sceneryTheme === 'beach') {
     return (
       <group>
-        {/* Ocean plane overlay */}
-        <mesh position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[500, 500]} />
-          <meshStandardMaterial color="#0284c7" opacity={0.65} transparent roughness={0.1} />
+        <AnimatedOcean />
+        <CloudLayer count={12} color="#ffffff" height={32} />
+        {/* Sandy beach ring around the hotel */}
+        <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[20, 26, 48]} />
+          <meshStandardMaterial color="#fcd34d" roughness={1} side={THREE.DoubleSide} />
         </mesh>
-        {/* Palm Trees */}
         {palms.map((p, idx) => (
-          <group key={idx} position={[p.x, 0, p.z]} scale={[p.scale, p.scale, p.scale]}>
-            <mesh position={[0, 2.5, 0]}>
-              <cylinderGeometry args={[0.15, 0.25, 5, 8]} />
-              <meshStandardMaterial color="#78350f" roughness={0.9} />
-            </mesh>
-            <mesh position={[0, 5, 0]} rotation={[0, 0, 0.2]}>
-              <coneGeometry args={[1.5, 1, 5]} />
-              <meshStandardMaterial color="#166534" roughness={0.7} />
-            </mesh>
-            <mesh position={[0, 4.8, 0]} rotation={[0.2, 2, -0.1]}>
-              <coneGeometry args={[1.6, 0.8, 5]} />
-              <meshStandardMaterial color="#15803d" roughness={0.7} />
-            </mesh>
-          </group>
+          <PalmTree key={idx} x={p.x} z={p.z} scale={p.scale} />
         ))}
       </group>
     );
@@ -1382,35 +1662,22 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: 'city' | 'beach' | 'mountain
   if (sceneryTheme === 'mountain') {
     return (
       <group>
-        {/* Snowy Horizon Mountains */}
+        <CloudLayer count={10} color="#f8fafc" height={42} />
         {mountains.map((m, idx) => (
           <group key={idx} position={[m.x, 0, m.z]}>
-            <mesh position={[0, m.height / 2, 0]}>
-              <coneGeometry args={[m.radius, m.height, 6]} />
-              <meshStandardMaterial color="#475569" roughness={0.9} flatShading />
+            <mesh position={[0, m.height / 2, 0]} castShadow>
+              <coneGeometry args={[m.radius, m.height, 7]} />
+              <meshStandardMaterial color="#475569" roughness={0.95} flatShading />
             </mesh>
-            <mesh position={[0, m.height * 0.8, 0]}>
-              <coneGeometry args={[m.radius * 0.3, m.height * 0.4, 6]} />
-              <meshStandardMaterial color="#f8fafc" roughness={0.8} />
+            {/* Snow cap */}
+            <mesh position={[0, m.height * 0.78, 0]}>
+              <coneGeometry args={[m.radius * 0.35, m.height * 0.44, 7]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.7} flatShading />
             </mesh>
           </group>
         ))}
-        {/* Pines */}
-        {forestTrees.slice(0, 30).map((t, idx) => (
-          <group key={idx} position={[t.x, 0, t.z]} scale={[t.scale, t.scale, t.scale]}>
-            <mesh position={[0, 0.8, 0]}>
-              <cylinderGeometry args={[0.1, 0.15, 1.6, 6]} />
-              <meshStandardMaterial color="#451a03" />
-            </mesh>
-            <mesh position={[0, 1.8, 0]}>
-              <coneGeometry args={[0.7, 1.4, 6]} />
-              <meshStandardMaterial color="#065f46" flatShading />
-            </mesh>
-            <mesh position={[0, 2.5, 0]}>
-              <coneGeometry args={[0.5, 1.1, 6]} />
-              <meshStandardMaterial color="#047857" flatShading />
-            </mesh>
-          </group>
+        {forestTrees.slice(0, 35).map((t, idx) => (
+          <PineTree key={idx} x={t.x} z={t.z} scale={t.scale} snowy />
         ))}
       </group>
     );
@@ -1419,22 +1686,9 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: 'city' | 'beach' | 'mountain
   if (sceneryTheme === 'forest') {
     return (
       <group>
-        {/* Lots of green trees */}
+        <CloudLayer count={8} color="#e2e8f0" height={36} />
         {forestTrees.map((t, idx) => (
-          <group key={idx} position={[t.x, 0, t.z]} scale={[t.scale, t.scale, t.scale]}>
-            <mesh position={[0, t.height / 2, 0]}>
-              <cylinderGeometry args={[0.15, 0.22, t.height, 8]} />
-              <meshStandardMaterial color="#451a03" />
-            </mesh>
-            <mesh position={[0, t.height + 0.6, 0]}>
-              <sphereGeometry args={[1.1, 8, 8]} />
-              <meshStandardMaterial color="#166534" roughness={0.8} />
-            </mesh>
-            <mesh position={[0.4, t.height + 1.1, -0.2]} scale={[0.8, 0.8, 0.8]}>
-              <sphereGeometry args={[1.0, 8, 8]} />
-              <meshStandardMaterial color="#15803d" roughness={0.8} />
-            </mesh>
-          </group>
+          <RoundTree key={idx} x={t.x} z={t.z} scale={t.scale} height={t.height} />
         ))}
       </group>
     );
@@ -1443,54 +1697,29 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: 'city' | 'beach' | 'mountain
   if (sceneryTheme === 'desert') {
     return (
       <group>
-        {/* Sandy dunes */}
+        <CloudLayer count={6} color="#fef3c7" height={40} />
         {desertDunes.map((d, idx) => (
-          <mesh key={idx} position={[d.x, -0.05, d.z]} scale={[d.rx, d.h, d.rz]} rotation={[0.1, Math.random(), 0]}>
-            <sphereGeometry args={[1, 16, 8]} />
+          <mesh key={idx} position={[d.x, -0.05, d.z]} scale={[d.rx, d.h, d.rz]} rotation={[0.1, idx * 0.4, 0]} receiveShadow>
+            <sphereGeometry args={[1, 18, 10]} />
             <meshStandardMaterial color="#eab308" roughness={1.0} flatShading />
           </mesh>
         ))}
-        {/* Palm Trees / Cacti */}
-        {palms.slice(0, 12).map((p, idx) => (
-          <group key={idx} position={[p.x, 0, p.z]} scale={[p.scale * 0.8, p.scale * 0.8, p.scale * 0.8]}>
-            <mesh position={[0, 1.5, 0]}>
-              <cylinderGeometry args={[0.18, 0.18, 3, 8]} />
-              <meshStandardMaterial color="#16a34a" roughness={0.9} />
-            </mesh>
-            <group position={[0, 1.6, 0]}>
-              <mesh position={[0.4, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.13, 0.13, 0.8, 8]} />
-                <meshStandardMaterial color="#16a34a" />
-              </mesh>
-              <mesh position={[0.8, 1.0, 0]}>
-                <cylinderGeometry args={[0.13, 0.13, 1.2, 8]} />
-                <meshStandardMaterial color="#16a34a" />
-              </mesh>
-            </group>
-            <group position={[0, 1.0, 0]} rotation={[0, Math.PI, 0]}>
-              <mesh position={[0.4, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.13, 0.13, 0.8, 8]} />
-                <meshStandardMaterial color="#16a34a" />
-              </mesh>
-              <mesh position={[0.8, 1.0, 0]}>
-                <cylinderGeometry args={[0.13, 0.13, 1.2, 8]} />
-                <meshStandardMaterial color="#16a34a" />
-              </mesh>
-            </group>
-          </group>
+        {palms.slice(0, 10).map((p, idx) => (
+          <PalmTree key={idx} x={p.x} z={p.z} scale={p.scale * 0.85} />
+        ))}
+        {forestTrees.slice(0, 14).map((t, idx) => (
+          <Cactus key={idx} x={t.x} z={t.z} scale={t.scale * 0.9} />
         ))}
       </group>
     );
   }
 
-  // DEFAULT/CITY Skyline
+  // DEFAULT / CITY skyline
   return (
     <group>
+      <CloudLayer count={10} color="#cbd5e1" height={45} />
       {cityBuildings.map((b, idx) => (
-        <mesh key={idx} position={[b.x, b.height / 2 - 0.1, b.z]}>
-          <boxGeometry args={[b.width, b.height, b.depth]} />
-          <meshStandardMaterial color={b.color} roughness={0.3} metalness={0.1} />
-        </mesh>
+        <CityBuilding key={idx} x={b.x} z={b.z} width={b.width} height={b.height} depth={b.depth} color={b.color} />
       ))}
     </group>
   );
@@ -1734,33 +1963,32 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
             maxPolarAngle={Math.PI / 2 - 0.05}
           />
         )}
-        <Sky 
-          sunPosition={hotelLocation?.sceneryTheme === 'desert' ? [100, 5, 10] : [100, 20, 100]} 
-          turbidity={hotelLocation?.sceneryTheme === 'desert' ? 2.5 : 0.1} 
-          rayleigh={hotelLocation?.sceneryTheme === 'desert' ? 2.0 : 0.5} 
-        />
-        <ambientLight intensity={hotelLocation?.sceneryTheme === 'desert' ? 0.45 : 0.4} color={hotelLocation?.sceneryTheme === 'desert' ? '#ffedd5' : '#ffffff'} />
-        <directionalLight 
-          position={[10, 20, 10]} 
-          intensity={1.5} 
-          castShadow 
-          color={hotelLocation?.sceneryTheme === 'desert' ? '#f97316' : '#ffffff'}
-        />
-        <directionalLight position={[-10, 10, -10]} intensity={0.5} />
-        
-        {/* Ground Plane */}
-        <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[500, 500]} />
-          <meshStandardMaterial 
-            color={
-              hotelLocation?.sceneryTheme === 'beach' ? '#ca8a04' :
-              hotelLocation?.sceneryTheme === 'mountain' ? '#15803d' :
-              hotelLocation?.sceneryTheme === 'forest' ? '#14532d' :
-              hotelLocation?.sceneryTheme === 'desert' ? '#eab308' :
-              '#0f172a'
-            } 
-          />
-        </mesh>
+        {(() => {
+          const theme = SCENERY_THEMES[hotelLocation?.sceneryTheme || 'city'];
+          return (
+            <>
+              <Sky
+                sunPosition={theme.sky.sunPosition}
+                turbidity={theme.sky.turbidity}
+                rayleigh={theme.sky.rayleigh}
+              />
+              <ambientLight intensity={theme.ambient.intensity} color={theme.ambient.color} />
+              <directionalLight
+                position={[10, 20, 10]}
+                intensity={theme.directional.intensity}
+                castShadow
+                color={theme.directional.color}
+              />
+              <directionalLight position={[-10, 10, -10]} intensity={0.4} color={theme.ambient.color} />
+              <fog attach="fog" args={[theme.fog.color, theme.fog.near, theme.fog.far]} />
+              {/* Ground Plane */}
+              <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+                <planeGeometry args={[500, 500]} />
+                <meshStandardMaterial color={theme.ground} roughness={0.95} />
+              </mesh>
+            </>
+          );
+        })()}
 
         <EnvironmentScenery sceneryTheme={hotelLocation?.sceneryTheme} />
 

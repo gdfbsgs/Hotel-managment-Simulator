@@ -97,16 +97,16 @@ export const Editor2D: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center px-4 gap-4 shrink-0 shadow-sm z-10">
-        <div className="flex items-center gap-1 border-r border-slate-800 pr-4">
-          <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))} className="p-1 hover:bg-slate-800 rounded text-slate-400" title="Zoom Out">
+      <div className="h-10 bg-[#0f1620] border-b border-[#1c2638] flex items-center px-4 gap-4 shrink-0 shadow-sm z-10">
+        <div className="flex items-center gap-1 border-r border-[#1c2638] pr-4">
+          <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))} className="p-1 hover:bg-[#151d2b] rounded text-slate-400" title="Zoom Out">
             <ZoomOut size={16} />
           </button>
           <span className="text-xs font-semibold text-slate-300 w-12 text-center">{Math.round(zoom * 100)}%</span>
-          <button onClick={() => setZoom(z => Math.min(z + 0.2, 3))} className="p-1 hover:bg-slate-800 rounded text-slate-400" title="Zoom In">
+          <button onClick={() => setZoom(z => Math.min(z + 0.2, 3))} className="p-1 hover:bg-[#151d2b] rounded text-slate-400" title="Zoom In">
             <ZoomIn size={16} />
           </button>
-          <button onClick={() => setZoom(1)} className="p-1 hover:bg-slate-800 rounded text-slate-400 ml-1" title="Reset Zoom">
+          <button onClick={() => setZoom(1)} className="p-1 hover:bg-[#151d2b] rounded text-slate-400 ml-1" title="Reset Zoom">
             <Maximize size={16} />
           </button>
         </div>
@@ -115,23 +115,23 @@ export const Editor2D: React.FC = () => {
             Snap to Grid (Orthogonal)
           </label>
           <button 
-            className={`w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${snapToGrid ? 'bg-amber-500' : 'bg-slate-850'}`}
+            className={`w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${snapToGrid ? 'bg-[#1fa87c]' : 'bg-[#1c2638]'}`}
             onClick={() => setSnapToGrid(!snapToGrid)}
           >
-            <div className={`w-3 h-3 rounded-full transition-transform ${snapToGrid ? 'translate-x-4 bg-slate-950' : 'translate-x-0 bg-slate-400'}`}></div>
+            <div className={`w-3 h-3 rounded-full transition-transform ${snapToGrid ? 'translate-x-4 bg-[#0a0e14]' : 'translate-x-0 bg-slate-400'}`}></div>
           </button>
         </div>
       </div>
       <div 
-        className="flex flex-1 items-center justify-center p-8 overflow-auto touch-none relative bg-slate-950"
+        className="flex flex-1 items-center justify-center p-8 overflow-auto touch-none relative bg-[#0a0e14]"
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
       >
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-        <div className="relative z-10 bg-slate-900 p-3 rounded-2xl shadow-2xl border border-slate-800">
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#1c2638 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+        <div className="relative z-10 bg-[#0f1620] p-3 rounded-2xl shadow-2xl border border-[#1c2638]">
           <div className="relative">
             <div 
-              className="grid bg-slate-950 gap-[1px] border border-slate-850 overflow-hidden rounded-lg"
+              className="grid bg-[#0a0e14] gap-[1px] border border-[#151d2b] overflow-hidden rounded-lg"
               style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))` }}
             >
               {grid.map((row, y) => (
@@ -308,21 +308,21 @@ export const Editor2D: React.FC = () => {
             )}
 
             {selectedTool === 'elevator' && (
-              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-slate-900/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-purple-500/30 flex items-center gap-3.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2">
+              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-[#0f1620]/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-[#1fa87c]/30 flex items-center gap-3.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm">🛗</span>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-purple-400 font-mono">Elevator Setup Choice</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#43c397] font-mono">Elevator Setup Choice</p>
                     <p className="text-[9px] text-slate-400">Select active drive algorithm</p>
                   </div>
                 </div>
-                <div className="h-6 w-px bg-slate-800"></div>
-                <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800/80">
+                <div className="h-6 w-px bg-[#1c2638]"></div>
+                <div className="flex bg-[#0a0e14] p-0.5 rounded-lg border border-[#1c2638]/80">
                   <button
                     onClick={() => setElevatorSystemMode('standard')}
                     className={`px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all cursor-pointer ${
                       elevatorSystemMode === 'standard'
-                        ? 'bg-purple-600 text-white shadow shadow-purple-600/30 font-black'
+                        ? 'bg-[#1fa87c] text-white shadow shadow-[#1fa87c]/30 font-black'
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
@@ -332,7 +332,7 @@ export const Editor2D: React.FC = () => {
                     onClick={() => setElevatorSystemMode('dcs')}
                     className={`px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all cursor-pointer ${
                       elevatorSystemMode === 'dcs'
-                        ? 'bg-purple-600 text-white shadow shadow-purple-600/30 font-black'
+                        ? 'bg-[#1fa87c] text-white shadow shadow-[#1fa87c]/30 font-black'
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
