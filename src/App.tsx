@@ -15,6 +15,7 @@ import { Box, Layers, LogIn, LogOut, Save, User as UserIcon, Trophy, Sparkles, S
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 import { motion, AnimatePresence } from 'motion/react';
+import { Onboarding } from './components/Onboarding';
 
 export default function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -44,7 +45,8 @@ export default function App() {
     graphicsQuality,
     setGraphicsQuality,
     spectatorMode,
-    setSpectatorMode
+    setSpectatorMode,
+    onboardingCompleted
   } = useHotelStore();
 
   const starRating = React.useMemo(() => {
@@ -70,7 +72,7 @@ export default function App() {
     return Math.min(5.0, Math.max(1.0, Math.round(totalRating * 10) / 10));
   }, [floors, totalGuestsServed, guests]);
 
-  const activeHotel = (hotels || []).find(h => h.id === activeHotelId) || hotels?.[0] || { name: 'Grand Plaza Resort', brandId: 'b-budget' };
+  const activeHotel = (hotels || []).find(h => h.id === activeHotelId) || hotels?.[0] || { name: 'Courtyard Marriott Resort', brandId: 'b-courtyard' };
   const allBrands = [...DEFAULT_BRANDS, ...(customBrands || [])];
   const activeBrand = allBrands.find(b => b.id === (activeHotel.brandId || activeHotelBrandId)) || DEFAULT_BRANDS[0];
 
@@ -159,15 +161,15 @@ Built and managed with ArchHotel Suite!`;
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden pb-16 sm:pb-0">
-      <nav className="h-16 bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800/80 flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-2xl z-20">
+    <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-100 font-sans overflow-hidden pb-16 sm:pb-0">
+      <nav className="h-16 bg-slate-900/40 backdrop-blur-md border-b border-slate-900/80 flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-2xl z-20">
         <div className="flex items-center gap-4 sm:gap-8">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/15 shrink-0">
-              <span className="text-zinc-950 font-black text-sm">{activeBrand.icon}</span>
+            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/10 shrink-0">
+              <span className="text-slate-950 font-black text-base">{activeBrand.icon}</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-extrabold tracking-tight text-white leading-none text-xs sm:text-sm">
+              <span className="font-extrabold tracking-tight text-white leading-none text-xs sm:text-sm font-display">
                 {activeHotel.name} <span className="text-[10px] sm:text-xs font-semibold text-amber-500 block sm:inline mt-0.5 sm:mt-0 sm:ml-1.5 font-mono uppercase">[{activeBrand.name}]</span>
               </span>
               {/* Stars display */}
@@ -179,28 +181,28 @@ Built and managed with ArchHotel Suite!`;
                     <Star 
                       key={i} 
                       size={10} 
-                      className={`${isFilled ? 'text-amber-400 fill-amber-400 animate-pulse' : 'text-zinc-700'}`} 
+                      className={`${isFilled ? 'text-amber-400 fill-amber-400 animate-pulse' : 'text-slate-800'}`} 
                     />
                   );
                 })}
-                <span className="text-[9px] text-zinc-400 font-bold font-mono ml-1">({starRating.toFixed(1)} ★)</span>
+                <span className="text-[9px] text-slate-400 font-bold font-mono ml-1">({starRating.toFixed(1)} ★)</span>
               </div>
             </div>
           </div>
-          <div className="flex gap-6 text-xs font-semibold uppercase tracking-wider hidden sm:flex">
+          <div className="flex gap-6 text-[11px] font-bold uppercase tracking-wider hidden sm:flex font-display">
             <span 
               onClick={() => setAppMode('Design')}
-              className={`cursor-pointer transition-all duration-200 ${appMode === 'Design' ? 'text-amber-400 border-b-2 border-amber-500 pb-2 mt-1 font-bold' : 'text-zinc-400 hover:text-white mt-1'}`}>
+              className={`cursor-pointer transition-all duration-200 ${appMode === 'Design' ? 'text-amber-400 border-b-2 border-amber-500 pb-2 mt-1 font-extrabold' : 'text-slate-400 hover:text-white mt-1'}`}>
               Design
             </span>
             <span 
               onClick={() => setAppMode('Management')}
-              className={`cursor-pointer transition-all duration-200 ${appMode === 'Management' ? 'text-amber-400 border-b-2 border-amber-500 pb-2 mt-1 font-bold' : 'text-zinc-400 hover:text-white mt-1'}`}>
+              className={`cursor-pointer transition-all duration-200 ${appMode === 'Management' ? 'text-amber-400 border-b-2 border-amber-500 pb-2 mt-1 font-extrabold' : 'text-slate-400 hover:text-white mt-1'}`}>
               Management
             </span>
             <span 
               onClick={() => setAppMode('Analytics')}
-              className={`cursor-pointer transition-all duration-200 ${appMode === 'Analytics' ? 'text-amber-400 border-b-2 border-amber-500 pb-2 mt-1 font-bold' : 'text-zinc-400 hover:text-white mt-1'}`}>
+              className={`cursor-pointer transition-all duration-200 ${appMode === 'Analytics' ? 'text-amber-400 border-b-2 border-amber-500 pb-2 mt-1 font-extrabold' : 'text-slate-400 hover:text-white mt-1'}`}>
               Analytics
             </span>
           </div>
@@ -209,13 +211,13 @@ Built and managed with ArchHotel Suite!`;
         <div className="flex items-center gap-2 sm:gap-3">
           <AnimatedMoney money={money} />
           {appMode === 'Design' && (
-            <div className="flex items-center gap-1 p-0.5 bg-zinc-950 rounded-xl border border-zinc-800 shadow-inner scale-90 sm:scale-100">
+            <div className="flex items-center gap-1 p-0.5 bg-slate-950 rounded-xl border border-slate-900 shadow-inner scale-90 sm:scale-100">
               <button
                 onClick={() => setViewMode('2D')}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all uppercase tracking-wide cursor-pointer ${
                   viewMode === '2D' 
-                    ? 'bg-amber-500 text-zinc-950 shadow-sm border border-amber-400/30' 
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm border border-amber-400/30' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
                 }`}
               >
                 2D
@@ -224,8 +226,8 @@ Built and managed with ArchHotel Suite!`;
                 onClick={() => setViewMode('3D')}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all uppercase tracking-wide cursor-pointer ${
                   viewMode === '3D' 
-                    ? 'bg-amber-500 text-zinc-950 shadow-sm border border-amber-400/30' 
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm border border-amber-400/30' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
                 }`}
               >
                 3D
@@ -234,8 +236,8 @@ Built and managed with ArchHotel Suite!`;
                 onClick={() => setViewMode('Walk')}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all uppercase tracking-wide cursor-pointer ${
                   viewMode === 'Walk' 
-                    ? 'bg-amber-500 text-zinc-950 shadow-sm border border-amber-400/30 shadow-amber-500/5' 
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm border border-amber-400/30 shadow-amber-500/5' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
                 }`}
               >
                 Walk
@@ -245,20 +247,20 @@ Built and managed with ArchHotel Suite!`;
 
           {/* Realism & Engine Quality Settings Control */}
           <div className="relative group/settings z-30">
-            <button className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-zinc-950 hover:bg-zinc-900 text-zinc-300 border border-zinc-800 rounded-xl transition-colors cursor-pointer font-bold select-none">
+            <button className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-slate-950 hover:bg-slate-900 text-slate-300 border border-slate-900 rounded-xl transition-colors cursor-pointer font-bold select-none">
               <Sparkles size={13} className="text-amber-500 animate-pulse" />
-              <span className="hidden md:inline">Realism Controls</span>
+              <span className="hidden md:inline font-display">Simulation Quality</span>
               <span className="md:hidden">Settings</span>
             </button>
             
             {/* Hover dropdown */}
-            <div className="absolute right-0 top-full mt-1.5 hidden group-hover/settings:block bg-zinc-900 border-2 border-zinc-800 shadow-2xl rounded-2xl p-4 min-w-[240px] text-left animate-in fade-in slide-in-from-top-1 duration-150">
-              <h4 className="text-[10px] font-black uppercase text-zinc-400 tracking-widest mb-3 border-b border-zinc-850 pb-1.5">Simulation Engine</h4>
+            <div className="absolute right-0 top-full mt-1.5 hidden group-hover/settings:block bg-slate-900 border-2 border-slate-800 shadow-2xl rounded-2xl p-4 min-w-[240px] text-left animate-in fade-in slide-in-from-top-1 duration-150">
+              <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3 border-b border-slate-800 pb-1.5 font-display">SIMULATION ENGINE</h4>
               
               {/* Graphics Quality */}
               <div className="flex flex-col gap-1.5 mb-4">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase font-mono">Render Quality</label>
-                <div className="grid grid-cols-4 gap-1 p-0.5 bg-zinc-950 rounded-xl border border-zinc-800">
+                <label className="text-[10px] font-bold text-slate-400 uppercase font-mono">Render Quality</label>
+                <div className="grid grid-cols-4 gap-1 p-0.5 bg-slate-950 rounded-xl border border-slate-800">
                   {(['low', 'medium', 'high', 'ultra'] as const).map((q) => {
                     const active = graphicsQuality === q;
                     return (
@@ -267,8 +269,8 @@ Built and managed with ArchHotel Suite!`;
                         onClick={() => setGraphicsQuality(q)}
                         className={`py-1 text-[9px] font-black rounded-lg capitalize transition-all cursor-pointer ${
                           active 
-                            ? 'bg-amber-500 text-zinc-950' 
-                            : 'text-zinc-500 hover:text-zinc-300'
+                            ? 'bg-amber-500 text-slate-950 font-extrabold' 
+                            : 'text-slate-500 hover:text-slate-300'
                         }`}
                       >
                         {q === 'medium' ? 'Med' : q}
@@ -279,14 +281,14 @@ Built and managed with ArchHotel Suite!`;
               </div>
 
               {/* Spectator Mode */}
-              <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-zinc-350 uppercase">Spectator Mode</span>
-                  <span className="text-[8px] text-zinc-500 font-mono">Noclip Flight Mode</span>
+                  <span className="text-[10px] font-bold text-slate-300 uppercase font-display">Spectator Mode</span>
+                  <span className="text-[8px] text-slate-500 font-mono">Noclip Flight Mode</span>
                 </div>
                 <button
                   onClick={() => setSpectatorMode(!spectatorMode)}
-                  className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${spectatorMode ? 'bg-amber-500' : 'bg-zinc-800'}`}
+                  className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${spectatorMode ? 'bg-amber-500' : 'bg-slate-800'}`}
                 >
                   <div className={`bg-white w-5 h-5 rounded-full shadow-md transition-transform ${spectatorMode ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
@@ -294,26 +296,26 @@ Built and managed with ArchHotel Suite!`;
             </div>
           </div>
 
-          <div className="w-px h-6 bg-zinc-800 mx-1 hidden sm:block"></div>
+          <div className="w-px h-6 bg-slate-850 mx-1 hidden sm:block"></div>
           {user ? (
             <>
-              <button onClick={saveToCloud} className="flex items-center gap-1.5 px-3 py-2 text-xs bg-emerald-600 text-white rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-colors hidden sm:flex">
+              <button onClick={saveToCloud} className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-emerald-650 text-white rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-colors hidden sm:flex cursor-pointer">
                 <Save size={14} /> Save
               </button>
               <div className="relative group">
-                <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center overflow-hidden cursor-pointer">
-                  {user.photoURL ? <img src={user.photoURL} alt="User" /> : <UserIcon size={16} className="text-zinc-300" />}
+                <div className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden cursor-pointer">
+                  {user.photoURL ? <img src={user.photoURL} alt="User" /> : <UserIcon size={16} className="text-slate-300" />}
                 </div>
-                <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block bg-zinc-900 border border-zinc-800 shadow-2xl rounded-xl py-1 z-50 min-w-[140px] overflow-hidden">
-                  <div className="px-3 py-2 text-xs text-zinc-400 border-b border-zinc-850 truncate">{user.email}</div>
-                  <button onClick={logout} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2">
+                <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block bg-slate-900 border border-slate-800 shadow-2xl rounded-xl py-1 z-50 min-w-[140px] overflow-hidden">
+                  <div className="px-3 py-2 text-xs text-slate-400 border-b border-slate-850 truncate">{user.email}</div>
+                  <button onClick={logout} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-slate-850 flex items-center gap-2 cursor-pointer">
                     <LogOut size={14} /> Sign out
                   </button>
                 </div>
               </div>
             </>
           ) : (
-            <button onClick={login} className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-amber-500 hover:bg-amber-600 text-zinc-950 rounded-xl font-extrabold shadow-lg shadow-amber-500/10 transition-colors">
+            <button onClick={login} className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-extrabold shadow-lg shadow-amber-500/10 transition-colors cursor-pointer select-none">
               <LogIn size={14} /> Sign In
             </button>
           )}
@@ -330,10 +332,10 @@ Built and managed with ArchHotel Suite!`;
 
             {/* Mobile Sidebar Overlay */}
             {viewMode === '2D' && mobileSidebarOpen && (
-              <div className="md:hidden fixed inset-y-16 right-0 w-64 bg-zinc-900 border-l border-zinc-800 z-30 shadow-2xl overflow-y-auto">
-                <div className="p-2.5 border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Toolbox & Floors</span>
-                  <button onClick={() => setMobileSidebarOpen(false)} className="p-1.5 text-zinc-400 hover:text-white">
+              <div className="md:hidden fixed inset-y-16 right-0 w-64 bg-slate-900 border-l border-slate-800 z-30 shadow-2xl overflow-y-auto">
+                <div className="p-2.5 border-b border-slate-850 flex justify-between items-center bg-slate-950">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Toolbox & Floors</span>
+                  <button onClick={() => setMobileSidebarOpen(false)} className="p-1.5 text-slate-400 hover:text-white cursor-pointer">
                     <X size={16} />
                   </button>
                 </div>
@@ -345,28 +347,28 @@ Built and managed with ArchHotel Suite!`;
             {viewMode === '2D' && (
               <button
                 onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-                className="md:hidden fixed bottom-20 right-4 z-30 bg-amber-500 text-zinc-950 px-4 py-2.5 rounded-full shadow-2xl font-black flex items-center gap-1.5 border border-amber-400 text-xs uppercase tracking-wider transition-all active:scale-95"
+                className="md:hidden fixed bottom-20 right-4 z-30 bg-amber-500 text-slate-950 px-4 py-2.5 rounded-full shadow-2xl font-black flex items-center gap-1.5 border border-amber-400 text-xs uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
               >
                 {mobileSidebarOpen ? <X size={14} /> : <Layers size={14} />}
                 <span>{mobileSidebarOpen ? 'Close Tools' : 'Tools & Floors'}</span>
               </button>
             )}
 
-            <main className="flex-1 flex flex-col relative overflow-hidden bg-zinc-950">
+            <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-950">
               {viewMode === '2D' ? <Editor2D /> : <Viewer3D mode={viewMode} />}
             </main>
           </>
-        )}
+         )}
         {appMode === 'Management' && <Management />}
         {appMode === 'Analytics' && <Analytics />}
       </div>
       
       {/* Mobile Bottom Navigation Bar (Visible only on screens < sm) */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-zinc-900 border-t border-zinc-800 z-30 flex items-center justify-around px-2 shadow-xl shrink-0">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900 border-t border-slate-850 z-30 flex items-center justify-around px-2 shadow-xl shrink-0">
         <button
           onClick={() => setAppMode('Design')}
           className={`flex flex-col items-center justify-center w-20 h-full transition-all ${
-            appMode === 'Design' ? 'text-amber-400 font-extrabold scale-105' : 'text-zinc-400 hover:text-white'
+            appMode === 'Design' ? 'text-amber-400 font-extrabold scale-105' : 'text-slate-400 hover:text-white'
           }`}
         >
           <Layers size={18} />
@@ -376,7 +378,7 @@ Built and managed with ArchHotel Suite!`;
         <button
           onClick={() => setAppMode('Management')}
           className={`flex flex-col items-center justify-center w-20 h-full transition-all ${
-            appMode === 'Management' ? 'text-amber-400 font-extrabold scale-105' : 'text-zinc-400 hover:text-white'
+            appMode === 'Management' ? 'text-amber-400 font-extrabold scale-105' : 'text-slate-400 hover:text-white'
           }`}
         >
           <Building2 size={18} />
@@ -386,7 +388,7 @@ Built and managed with ArchHotel Suite!`;
         <button
           onClick={() => setAppMode('Analytics')}
           className={`flex flex-col items-center justify-center w-20 h-full transition-all ${
-            appMode === 'Analytics' ? 'text-amber-400 font-extrabold scale-105' : 'text-zinc-400 hover:text-white'
+            appMode === 'Analytics' ? 'text-amber-400 font-extrabold scale-105' : 'text-slate-400 hover:text-white'
           }`}
         >
           <TrendingUp size={18} />
@@ -394,9 +396,9 @@ Built and managed with ArchHotel Suite!`;
         </button>
       </div>
 
-      <footer className="h-7 bg-zinc-950 border-t border-zinc-850 px-4 flex items-center justify-between text-[10px] text-zinc-400 shrink-0 font-medium z-20 relative hidden sm:flex">
+      <footer className="h-7 bg-slate-950 border-t border-slate-900 px-4 flex items-center justify-between text-[10px] text-slate-400 shrink-0 font-medium z-20 relative hidden sm:flex">
         <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Engine Active</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Engine Active</span>
           <span>Grid: 0.50m</span>
         </div>
         <div className="flex items-center gap-4">
@@ -474,25 +476,66 @@ Built and managed with ArchHotel Suite!`;
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
+                      animate={copiedShare ? { scale: [1, 1.12, 1], y: [0, -4, 0] } : { scale: 1, y: 0 }}
+                      transition={{ duration: 0.35, ease: "easeInOut" }}
                       onClick={handleShare}
-                      className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold border transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                      className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold border transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
                         copiedShare 
-                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' 
+                          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-md shadow-emerald-500/5' 
                           : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
                       }`}
                       id="milestone-share-btn"
                     >
-                      {copiedShare ? (
-                        <>
-                          <Check size={16} className="text-emerald-400" />
-                          <span>Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Share2 size={16} />
-                          <span>Share</span>
-                        </>
-                      )}
+                      <AnimatePresence mode="wait" initial={false}>
+                        {copiedShare ? (
+                          <motion.div
+                            key="success"
+                            className="flex items-center justify-center gap-2"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.1 }}
+                          >
+                            <motion.span
+                              initial={{ scale: 0.2, opacity: 0 }}
+                              animate={{ 
+                                scale: [0.2, 1.6, 1.0], 
+                                opacity: 1 
+                              }}
+                              transition={{ 
+                                type: "spring",
+                                stiffness: 450,
+                                damping: 11,
+                                duration: 0.45
+                              }}
+                              className="inline-block"
+                            >
+                              <Check size={16} className="text-emerald-400" />
+                            </motion.span>
+                            <motion.span
+                              initial={{ opacity: 0, x: -4 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.1, duration: 0.15 }}
+                            >
+                              Copied!
+                            </motion.span>
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="idle"
+                            className="flex items-center justify-center gap-2"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.1 }}
+                          >
+                            <motion.span className="inline-block">
+                              <Share2 size={16} />
+                            </motion.span>
+                            <span>Share</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.button>
 
                     <motion.button
@@ -514,6 +557,7 @@ Built and managed with ArchHotel Suite!`;
           </div>
         )}
       </AnimatePresence>
+      {!onboardingCompleted && <Onboarding />}
     </div>
   );
 }

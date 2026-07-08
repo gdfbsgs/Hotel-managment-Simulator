@@ -59,18 +59,42 @@ Each cell in the grid represents a tile type. Use ONLY these exact characters:
 
 Important rules for layout:
 - If the user specifies a number of floors (e.g. "a 10 floor hotel", "3 floors"), generate exactly that number of floors (up to 10 floors). If they do not specify, default to generating 2 floors.
-- The ground floor (level 0) should represent the Grand Entrance and Reception Lobby:
-  - It MUST contain the reception desk ('R') placed near the front-center entrance area (e.g. around y = 14 to 17, x = 10).
-  - It should contain a beautiful lobby seating area with tables ('T'), decorative plants ('P'), elevator ('E'), and stairs ('X').
-  - The floor tiles under all furniture (beds, bathrooms, tables, reception, plants, elevators, stairs) must be floor tiles ('.'). So ensure any indoor areas are filled with '.' as floor underlay, bounded by walls ('#').
-- Upper floors (level 1 and above) should contain hotel guest rooms:
-  - Divide the space into distinct modular hotel suites. Each suite must be fully enclosed by walls ('#').
-  - Inside each suite, place exactly one bed ('B'), a private bathroom ('b'), and a suite entrance door ('D') that connects directly to a continuous, wide central hallway ('.').
-  - Include windows ('W') on outer walls for natural light and scenery views.
-- Central Hallway Requirement: Each floor MUST contain a clear, continuous central corridor (built of '.' floor tiles) that directly connects the entrance door of every single room ('D') to both the elevators ('E') and the emergency stairs ('X') so guests can move around easily.
-- Outer boundaries: All floor plans must be closed with outer walls ('#'), but with a few scenic windows ('W') and at least one entrance containing doors ('D') on the ground floor.
-- CRITICAL Vertices Alignment: Elevators ('E') AND emergency stairs ('X') MUST align at the EXACT same (X, Y) coordinates across all floors of the hotel where they exist (e.g. elevator 'E' at column 2, row 2; stairs 'X' at column 17, row 17 across Ground Floor, Level 1, Level 2, etc.) so vertical transit and emergency evacuation works perfectly.
-- Each floor's grid must contain exactly 20 strings, and each string must be exactly 20 characters long. Any deviation in row or column count will break the application.`,
+- The ground floor (level 0) represents the Lobby, containing reception desk ('R'), some plants ('P'), seating tables ('T'), elevators ('E'), and stairs ('X'). It must have at least one main entrance door ('D') on the outer wall.
+- Upper floors (level 1 and above) MUST contain modular hotel suites and continuous hallways.
+- Each suite on upper floors MUST be enclosed by walls ('#'), and MUST contain:
+  1. Exactly one bed ('B')
+  2. Exactly one bathroom ('b')
+  3. Exactly one door ('D') built into the suite's wall that opens directly into the central hallway corridor ('.'). Do NOT omit doors!
+- Hallways/Corridors MUST be continuous pathways constructed of floor tiles ('.') that directly connect EVERY suite's entrance door ('D') to the elevators ('E') and stairs ('X').
+- Outer boundaries MUST be closed with walls ('#'), but you MUST include multiple windows ('W') on the outer walls of both the lobby and the suites so guests can view the outside scenery.
+- CRITICAL Vertices Alignment: Elevators ('E') AND emergency stairs ('X') MUST align at the EXACT same (X, Y) coordinates across all floors of the hotel where they exist (e.g., elevators 'E' at row 15, cols 6-7, and stairs 'X' at row 19, cols 9-10) to make vertical travel work correctly.
+- Each floor's grid MUST contain exactly 20 rows (strings) and each string MUST be exactly 20 characters long. Any other size will break the application.
+
+Here is a template demonstrating how to structure a Guest Floor (level 1+) with enclosed rooms, beds ('B'), bathrooms ('b'), windows ('W'), doors ('D'), and continuous hallways ('.') leading to elevators ('E') and stairs ('X'):
+
+Example Guest Floor Grid (20x20):
+[
+  "####################",
+  "#b.B.#..b.B.#..b.B.#",
+  "#....#......#......#",
+  "#....D......D......#",
+  "###D######D######D##",
+  "W..................W",
+  "W...EE......XX.....W",
+  "W...EE......XX.....W",
+  "###D######D######D##",
+  "#....D......D......#",
+  "#....#......#......#",
+  "#b.B.#..b.B.#..b.B.#",
+  "####################",
+  "W..................W",
+  "W..................W",
+  "W..................W",
+  "W..................W",
+  "W..................W",
+  "W..................W",
+  "####################"
+]`,
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useHotelStore } from '../store';
-import { DEFAULT_BRANDS } from '../store';
+import { DEFAULT_BRANDS, CHAIN_PRESETS } from '../store';
 import { 
   Building2, 
   Users, 
@@ -55,14 +55,25 @@ export const Management: React.FC = () => {
     createBonusProgram,
     activateBonusProgram,
     deleteBonusProgram,
-    floorTemplates
+    floorTemplates,
+    collaborators,
+    collaboratorEmails,
+    addCollaborator,
+    removeCollaborator,
+    loadedSharedChains,
+    loadSharedChainsList,
+    loadSharedChain,
+    stopSharing,
+    currentSharedOwnerUid,
+    user
   } = useHotelStore();
 
-  const [activeTab, setActiveTab] = useState<'chain' | 'staff' | 'guests' | 'pricing' | 'presets' | 'categories' | 'bonuses'>('chain');
+  const [activeTab, setActiveTab] = useState<'chain' | 'staff' | 'guests' | 'pricing' | 'presets' | 'categories' | 'bonuses' | 'co-op'>('chain');
 
   // New Hotel Form State
   const [newHotelName, setNewHotelName] = useState('');
-  const [newHotelBrand, setNewHotelBrand] = useState('b-budget');
+  const [newHotelChainId, setNewHotelChainId] = useState('c-marriott');
+  const [newHotelBrand, setNewHotelBrand] = useState('b-courtyard');
 
   // Custom Brand Creator State
   const [customBrandName, setCustomBrandName] = useState('');
@@ -91,6 +102,15 @@ export const Management: React.FC = () => {
   const [newProgramCost, setNewProgramCost] = useState(3000);
   const [newProgramFee, setNewProgramFee] = useState(30);
   const [newProgramPrivileges, setNewProgramPrivileges] = useState<string[]>([]);
+
+  // Co-Op Collaborator Form State
+  const [collabEmail, setCollabEmail] = useState('');
+  const [canEdit2D, setCanEdit2D] = useState(true);
+  const [canManageStaff, setCanManageStaff] = useState(true);
+  const [canControlPricing, setCanControlPricing] = useState(true);
+
+  // Selected Chain Map for Portfolio Brand Repositioning
+  const [selectedChainIdMap, setSelectedChainIdMap] = useState<Record<string, string>>({});
 
   const allBrands = [...DEFAULT_BRANDS, ...(customBrands || [])];
   const activeBrand = allBrands.find(b => b.id === activeHotelBrandId) || DEFAULT_BRANDS[0];
@@ -339,6 +359,20 @@ export const Management: React.FC = () => {
             <Sparkles size={14} />
             AI Generator
           </button>
+          <button 
+            onClick={() => {
+              setActiveTab('co-op');
+              loadSharedChainsList().catch(console.error);
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
+              activeTab === 'co-op' 
+                ? 'bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/10' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
+            }`}
+          >
+            <Users size={14} className="animate-pulse text-amber-400" />
+            Co-Op Multiplayer
+          </button>
         </div>
 
         {/* Tab 1: Chain HQ & Custom Brands */}
@@ -413,15 +447,38 @@ export const Management: React.FC = () => {
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase">Reposition Chain</span>
+                          <select
+                            value={selectedChainIdMap[h.id] || CHAIN_PRESETS.find(c => c.brands.some(b => b.id === h.brandId))?.id || 'custom'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSelectedChainIdMap(prev => ({ ...prev, [h.id]: val }));
+                              const chainObj = CHAIN_PRESETS.find(c => c.id === val);
+                              const firstBrandId = val === 'custom' ? (customBrands[0]?.id || 'custom') : (chainObj?.brands[0]?.id || 'b-courtyard');
+                              updateHotelBrand(h.id, firstBrandId);
+                            }}
+                            className="px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200 mt-1 focus:outline-none focus:border-amber-500"
+                          >
+                            {CHAIN_PRESETS.map(c => (
+                              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                            ))}
+                            <option value="custom">✨ Custom Chain</option>
+                          </select>
+                        </div>
+
                         <div className="flex flex-col">
                           <span className="text-[10px] text-slate-500 font-bold uppercase">Reposition Brand</span>
                           <select
                             value={h.brandId}
                             onChange={(e) => updateHotelBrand(h.id, e.target.value)}
-                            className="px-2 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-200 mt-1 focus:outline-none focus:border-amber-500"
+                            className="px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200 mt-1 focus:outline-none focus:border-amber-500"
                           >
-                            {allBrands.map(b => (
+                            {((selectedChainIdMap[h.id] || CHAIN_PRESETS.find(c => c.brands.some(b => b.id === h.brandId))?.id || 'custom') === 'custom'
+                              ? allBrands
+                              : (CHAIN_PRESETS.find(c => c.id === (selectedChainIdMap[h.id] || CHAIN_PRESETS.find(c => c.brands.some(b => b.id === h.brandId))?.id))?.brands || allBrands)
+                            ).map(b => (
                               <option key={b.id} value={b.id}>{b.icon} {b.name}</option>
                             ))}
                           </select>
@@ -455,26 +512,52 @@ export const Management: React.FC = () => {
                 </h3>
                 <p className="text-slate-400 text-xs mt-1">Establish a new branch under your chain umbrella. New hotels start with a base $15,000 budget.</p>
               </div>
-              <form onSubmit={handleBuildHotel} className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div className="space-y-1.5 col-span-1 md:col-span-1">
+              <form onSubmit={handleBuildHotel} className="p-5 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div className="space-y-1.5 col-span-1">
                   <label className="text-xs text-slate-400 font-semibold uppercase">Branch Location/Name</label>
                   <input
                     type="text"
                     value={newHotelName}
                     onChange={(e) => setNewHotelName(e.target.value)}
                     placeholder="e.g. Royal Crest Inn"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-amber-500 font-bold text-white text-sm"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-amber-500 font-bold text-white text-sm h-[38px]"
                     required
                   />
                 </div>
-                <div className="space-y-1.5 col-span-1 md:col-span-1">
+                <div className="space-y-1.5 col-span-1">
+                  <label className="text-xs text-slate-400 font-semibold uppercase">Select Corporate Chain</label>
+                  <select
+                    value={newHotelChainId}
+                    onChange={(e) => {
+                      const chainId = e.target.value;
+                      setNewHotelChainId(chainId);
+                      if (chainId !== 'custom') {
+                        const chainObj = CHAIN_PRESETS.find(c => c.id === chainId);
+                        const firstBrandId = chainObj?.brands[0]?.id || 'b-courtyard';
+                        setNewHotelBrand(firstBrandId);
+                      } else {
+                        setNewHotelBrand(customBrands[0]?.id || 'custom');
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-amber-500 text-slate-200 text-sm h-[38px]"
+                  >
+                    {CHAIN_PRESETS.map(c => (
+                      <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                    ))}
+                    <option value="custom">✨ Custom Fictional Chain</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5 col-span-1">
                   <label className="text-xs text-slate-400 font-semibold uppercase">Assign Brand Identity</label>
                   <select
                     value={newHotelBrand}
                     onChange={(e) => setNewHotelBrand(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-amber-500 text-slate-200 text-sm h-[38px]"
                   >
-                    {allBrands.map(b => (
+                    {(newHotelChainId === 'custom'
+                      ? allBrands
+                      : (CHAIN_PRESETS.find(c => c.id === newHotelChainId)?.brands || allBrands)
+                    ).map(b => (
                       <option key={b.id} value={b.id}>{b.icon} {b.name}</option>
                     ))}
                   </select>
@@ -1472,6 +1555,261 @@ export const Management: React.FC = () => {
                 </div>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* Tab 8: Co-Op Multiplayer */}
+        {activeTab === 'co-op' && (
+          <div className="space-y-6">
+            {/* User Connection Info */}
+            <div className="bg-slate-900 rounded-xl border border-slate-800 p-5">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                Multiplayer Identity
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Collaborate with other players in real-time. Work on the same hotel chain, manage rooms, and design layouts together.
+              </p>
+              
+              <div className="mt-4 p-4 bg-slate-950 rounded-lg border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Your Active Player Email</span>
+                  <p className="text-sm font-bold text-amber-400 mt-0.5">
+                    {user?.email || "Simulated Guest Player"}
+                  </p>
+                </div>
+                {!user && (
+                  <div className="flex items-center gap-2 w-full md:w-auto">
+                    <input 
+                      type="email" 
+                      placeholder="Enter test email..." 
+                      defaultValue="helper@archhotel.com"
+                      id="sim-email-input"
+                      className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded text-xs text-white focus:outline-none focus:border-amber-500 w-full md:w-[200px]"
+                    />
+                    <button 
+                      onClick={() => {
+                        const email = (document.getElementById('sim-email-input') as HTMLInputElement)?.value;
+                        if (email) {
+                          useHotelStore.getState().setUser({ email, uid: 'sim-user-' + Date.now() } as any);
+                          alert(`Simulated identity set to ${email}`);
+                        }
+                      }}
+                      className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-3.5 py-1.5 rounded transition-all whitespace-nowrap"
+                    >
+                      Set Identity
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column: Share / Add Collaborators (Owner View) */}
+              <div className="bg-slate-900 rounded-xl border border-slate-800 p-5">
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <span className="text-lg font-normal">📧</span> Share Your Chain
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Invite other players by email and customize their permission provisions.
+                </p>
+
+                {currentSharedOwnerUid ? (
+                  <div className="mt-4 p-4 border border-blue-900/30 bg-blue-950/10 rounded-xl text-xs text-blue-400 leading-relaxed">
+                    ℹ️ You are currently viewing a shared hotel chain. Switch back to your own chain to invite collaborators.
+                  </div>
+                ) : (
+                  <>
+                    <form 
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!collabEmail.trim()) return;
+                        try {
+                          await addCollaborator(collabEmail.trim(), {
+                            role: 'architect',
+                            allowEditing: canEdit2D,
+                            allowStaffManagement: canManageStaff,
+                            allowFinancials: canControlPricing
+                          });
+                          setCollabEmail('');
+                          alert(`Successfully invited ${collabEmail}!`);
+                        } catch (err: any) {
+                          alert(`Failed to add collaborator: ${err.message}`);
+                        }
+                      }}
+                      className="mt-4 space-y-4"
+                    >
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Player's Registered Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={collabEmail}
+                          onChange={(e) => setCollabEmail(e.target.value)}
+                          placeholder="partner-builder@hotel.com"
+                          className="w-full bg-slate-950 border border-slate-800 px-3.5 py-2 rounded-lg text-white focus:outline-none focus:border-amber-500/50 text-sm"
+                        />
+                      </div>
+
+                      <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-3">
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase">Set Provisions / Permissions</span>
+                        
+                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={canEdit2D}
+                            onChange={(e) => setCanEdit2D(e.target.checked)}
+                            className="rounded border-slate-800 text-amber-500 accent-amber-500"
+                          />
+                          <span className="text-xs text-slate-300">Allow 2D Room/Layout Designing (walls, beds, doors, toilets)</span>
+                        </label>
+
+                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={canManageStaff}
+                            onChange={(e) => setCanManageStaff(e.target.checked)}
+                            className="rounded border-slate-800 text-amber-500 accent-amber-500"
+                          />
+                          <span className="text-xs text-slate-300">Allow Hiring & Managing Staff Employees</span>
+                        </label>
+
+                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={canControlPricing}
+                            onChange={(e) => setCanControlPricing(e.target.checked)}
+                            className="rounded border-slate-800 text-amber-500 accent-amber-500"
+                          />
+                          <span className="text-xs text-slate-300">Allow Controlling Room Category Pricing</span>
+                        </label>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider py-2.5 rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all"
+                      >
+                        <Plus size={14} />
+                        Authorize Collaborator
+                      </button>
+                    </form>
+
+                    {/* Collaborators List */}
+                    <div className="mt-6">
+                      <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Active Authorized Builders</h4>
+                      {collaborators.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic py-2 border-t border-slate-800/60">No active collaborators yet. Invite players above to build together!</p>
+                      ) : (
+                        <div className="space-y-2.5 border-t border-slate-800/60 pt-3">
+                          {collaborators.map((c) => (
+                            <div key={c.email} className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex items-center justify-between gap-3 text-xs">
+                              <div>
+                                <span className="font-bold text-slate-200">{c.email}</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {c.provisions?.allowEditing && <span className="bg-zinc-800 text-zinc-300 text-[9px] px-1.5 py-0.5 rounded">2D Design</span>}
+                                  {c.provisions?.allowStaffManagement && <span className="bg-zinc-800 text-zinc-300 text-[9px] px-1.5 py-0.5 rounded">Staff Mgmt</span>}
+                                  {c.provisions?.allowFinancials && <span className="bg-zinc-800 text-zinc-300 text-[9px] px-1.5 py-0.5 rounded">Pricing</span>}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Revoke sharing permissions for ${c.email}?`)) {
+                                    removeCollaborator(c.email).catch(console.error);
+                                  }
+                                }}
+                                className="text-rose-500 hover:text-rose-400 p-1 font-bold hover:bg-rose-500/10 rounded transition-colors"
+                              >
+                                Revoke
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Right Column: Shared Hotels You Joined */}
+              <div className="bg-slate-900 rounded-xl border border-slate-800 p-5">
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <span className="text-lg font-normal">🌍</span> Join Shared Chains
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Connect to hotel chains owned by other players where you are authorized.
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  <button
+                    onClick={() => {
+                      loadSharedChainsList().then(() => alert('Shared chains list refreshed!')).catch(console.error);
+                    }}
+                    className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold py-1.5 px-3 rounded transition-colors flex items-center gap-1.5 mb-2"
+                  >
+                    🔄 Refresh List
+                  </button>
+
+                  {loadedSharedChains.length === 0 ? (
+                    <div className="p-5 text-center bg-slate-950 rounded-xl border border-slate-800">
+                      <p className="text-xs text-slate-500">No shared chains available yet.</p>
+                      <p className="text-[10px] text-slate-600 mt-1">Ensure another owner adds your player email as a collaborator.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {loadedSharedChains.map((sc) => {
+                        const isCurrentlyJoined = currentSharedOwnerUid === sc.ownerUid;
+                        return (
+                          <div 
+                            key={sc.ownerUid} 
+                            className={`p-4 rounded-xl border ${
+                              isCurrentlyJoined 
+                                ? 'border-amber-500/50 bg-amber-500/5' 
+                                : 'border-slate-800 bg-slate-950/40 hover:bg-slate-950/80'
+                            } transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs`}
+                          >
+                            <div>
+                              <div className="font-bold text-white text-sm">{sc.chainName || "Elite Hotel Chain"}</div>
+                              <div className="text-[10px] text-slate-400 mt-1 flex flex-col gap-0.5">
+                                <span>Owner UID: {sc.ownerUid.substring(0, 10)}...</span>
+                                <span>Collaborators: {sc.collaboratorEmails?.join(', ') || 'Only you'}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2 w-full sm:w-auto">
+                              {isCurrentlyJoined ? (
+                                <button
+                                  onClick={() => {
+                                    stopSharing();
+                                    alert('Returned to your own hotel chain.');
+                                  }}
+                                  className="w-full sm:w-auto bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs px-3.5 py-1.5 rounded transition-all whitespace-nowrap"
+                                >
+                                  Disconnect
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await loadSharedChain(sc.ownerUid);
+                                      alert(`Connected to ${sc.chainName || "Shared Chain"}!`);
+                                    } catch (err: any) {
+                                      alert(`Failed to join: ${err.message}`);
+                                    }
+                                  }}
+                                  className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded transition-all whitespace-nowrap"
+                                >
+                                  Join Chain
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

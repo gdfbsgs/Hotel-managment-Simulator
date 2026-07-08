@@ -85,6 +85,7 @@ export interface GuestNPC {
   };
   roomCategoryId?: string;
   enrolledInBonusProgram?: boolean;
+  toiletViolation?: boolean;
 }
 
 export interface RoomRates {
@@ -149,3 +150,26 @@ export interface HotelChain {
   roomCategories?: RoomCategory[];
   bonusPrograms?: BonusProgram[];
 }
+
+export interface ChainPreset {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  brands: Brand[];
+}
+
+export interface CollaboratorProvisions {
+  role: 'co-owner' | 'architect' | 'financial' | 'spectator';
+  maxSpendingBudget?: number; // spending budget cap, e.g. 5000 or undefined
+  allowEditing: boolean; // can place tiles
+  allowFinancials: boolean; // can set room rates, activate bonus programs, etc.
+  allowStaffManagement: boolean; // can hire/fire staff
+}
+
+export interface Collaborator {
+  email: string;
+  provisions: CollaboratorProvisions;
+  addedAt: string;
+}
+

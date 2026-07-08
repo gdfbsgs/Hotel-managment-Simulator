@@ -52,18 +52,20 @@ export const Sidebar: React.FC = () => {
     floorTemplates,
     saveFloorTemplate,
     loadFloorTemplate,
-    deleteFloorTemplate
+    deleteFloorTemplate,
+    elevatorSystemMode,
+    setElevatorSystemMode
   } = useHotelStore();
 
   const [newTemplateName, setNewTemplateName] = React.useState('');
   const [isSaving, setIsSaving] = React.useState(false);
 
   return (
-    <aside className="w-64 border-r border-zinc-800 bg-zinc-950 flex flex-col shrink-0 h-full text-zinc-100 shadow-xl shadow-black/80">
-      <div className="p-4 border-b border-zinc-800 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-zinc-950">
-        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-          <span className="text-zinc-400">Object Library</span>
-          <span className="text-[9px] font-medium text-sky-400 normal-case bg-sky-950/40 px-1.5 py-0.5 rounded border border-sky-850/20">Hover for guides</span>
+    <aside className="w-64 border-r border-slate-900 bg-slate-950 flex flex-col shrink-0 h-full text-slate-100 shadow-2xl">
+      <div className="p-4 border-b border-slate-900 flex-1 overflow-y-auto scrollbar-none">
+        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3.5 flex items-center justify-between font-display">
+          <span>OBJECT LIBRARY</span>
+          <span className="text-[9px] font-semibold text-sky-400 normal-case bg-sky-950/40 px-2 py-0.5 rounded border border-sky-900/30">Guides active</span>
         </h3>
         <div className="grid grid-cols-2 gap-2">
           {tools.map((tool) => {
@@ -73,38 +75,72 @@ export const Sidebar: React.FC = () => {
               <Tooltip key={tool.type} content={tool.description} className="w-full">
                 <button
                   onClick={() => setSelectedTool(tool.type)}
-                  className={`w-full aspect-[4/3] rounded-xl flex flex-col items-center justify-center p-2 transition-all border ${
+                  className={`w-full aspect-[4/3] rounded-xl flex flex-col items-center justify-center p-2 transition-all border cursor-pointer select-none ${
                     isActive 
-                      ? 'bg-amber-500/10 border-amber-500/60 ring-2 ring-amber-500/10 text-amber-500 font-extrabold shadow-lg shadow-amber-500/5' 
-                      : 'bg-zinc-900/40 border-zinc-800/80 hover:bg-zinc-800/60 hover:border-zinc-750 text-zinc-300'
+                      ? 'bg-amber-500/10 border-amber-500/50 ring-2 ring-amber-500/10 text-amber-500 font-extrabold shadow-md shadow-amber-500/5' 
+                      : 'bg-slate-900/30 border-slate-900 hover:bg-slate-900/60 hover:border-slate-800 text-slate-300'
                   }`}
                 >
-                  <Icon size={20} className={`mb-1.5 ${isActive ? 'text-amber-500 scale-110' : tool.color} transition-transform duration-200`} strokeWidth={isActive ? 2.5 : 2} />
-                  <span className={`text-[9px] font-bold tracking-wide ${isActive ? 'text-amber-500' : 'text-zinc-400'}`}>{tool.label}</span>
+                  <Icon size={18} className={`mb-1.5 ${isActive ? 'text-amber-500 scale-110' : tool.color} transition-transform duration-200`} strokeWidth={isActive ? 2.5 : 2} />
+                  <span className={`text-[9px] font-bold tracking-wide ${isActive ? 'text-amber-500' : 'text-slate-400'}`}>{tool.label}</span>
                 </button>
               </Tooltip>
             );
           })}
         </div>
 
+        {selectedTool === 'elevator' && (
+          <div className="mt-4 p-3 bg-purple-950/15 border border-purple-500/20 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1">
+            <div className="flex items-center gap-1.5 text-xs font-black uppercase text-purple-400 font-mono">
+              <ArrowUpDown size={12} />
+              <span>Elevator System Setup</span>
+            </div>
+            <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+              Choose whether elevators operate under standard logic or intelligent KONE Polaris DCS.
+            </p>
+            <div className="grid grid-cols-2 gap-1.5 pt-1">
+              <button
+                onClick={() => setElevatorSystemMode('standard')}
+                className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase border transition-all cursor-pointer ${
+                  elevatorSystemMode === 'standard'
+                    ? 'bg-purple-500 text-zinc-950 border-purple-400 font-black shadow-md shadow-purple-500/10'
+                    : 'bg-slate-900 border-slate-850 text-slate-400 hover:text-white'
+                }`}
+              >
+                Standard
+              </button>
+              <button
+                onClick={() => setElevatorSystemMode('dcs')}
+                className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase border transition-all cursor-pointer ${
+                  elevatorSystemMode === 'dcs'
+                    ? 'bg-purple-500 text-zinc-950 border-purple-400 font-black shadow-md shadow-purple-500/10'
+                    : 'bg-slate-900 border-slate-850 text-slate-400 hover:text-white'
+                }`}
+              >
+                KONE DCS
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mt-8">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Project Hierarchy</h3>
+          <div className="flex items-center justify-between mb-3.5">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-display">PROJECT HIERARCHY</h3>
             <Tooltip content="Adds a new floor level. Connect levels using Elevators to scale your operations." position="bottom">
               <button 
                 onClick={addFloor}
-                className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md text-[10px] font-bold hover:bg-amber-500/20 hover:text-amber-300 transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-[10px] font-bold hover:bg-amber-500/20 hover:text-amber-300 transition-colors cursor-pointer"
               >
-                <Plus size={12} /> Add Floor
+                <Plus size={12} /> Add Level
               </button>
             </Tooltip>
           </div>
           
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs p-1.5 rounded text-zinc-400">
-              <span className="font-bold uppercase tracking-wider text-[9px] text-zinc-500">ArchHotel Structure</span>
+            <div className="flex items-center gap-2 text-xs p-1.5 rounded text-slate-400">
+              <span className="font-extrabold uppercase tracking-wider text-[9px] text-slate-500 font-mono">ArchHotel Structure</span>
             </div>
-            <div className="ml-2 border-l border-zinc-800 space-y-1.5 py-1">
+            <div className="ml-2 border-l border-slate-900 space-y-1.5 py-1">
               {floors.map((floor, index) => (
                 <div
                   key={floor.level}
@@ -112,11 +148,11 @@ export const Sidebar: React.FC = () => {
                   className={`flex items-center gap-2 text-xs p-2 rounded-lg cursor-pointer transition-all ${
                     activeFloorIndex === index 
                       ? 'bg-amber-500/10 text-amber-500 font-extrabold border-l-2 border-amber-500 pl-2 shadow-sm shadow-amber-500/5' 
-                      : 'hover:bg-zinc-900/60 text-zinc-400 hover:text-white pl-1.5'
+                      : 'hover:bg-slate-900/40 text-slate-400 hover:text-white pl-1.5'
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${activeFloorIndex === index ? 'bg-amber-500 animate-pulse' : 'bg-zinc-700'}`}></span>
-                  <span className="truncate">{floor.name || `Level ${floor.level}`}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${activeFloorIndex === index ? 'bg-amber-500 animate-pulse' : 'bg-slate-700'}`}></span>
+                  <span className="truncate font-medium">{floor.name || `Level ${floor.level}`}</span>
                 </div>
               ))}
             </div>
@@ -124,13 +160,13 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Floor Configurations */}
-        <div className="mt-6 border-t border-zinc-800 pt-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Floor Templates</h3>
+        <div className="mt-6 border-t border-slate-900 pt-5">
+          <div className="flex items-center justify-between mb-3.5">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-display">FLOOR TEMPLATES</h3>
             <Tooltip content="Save the current active floor layout as a reusable template." position="bottom">
               <button 
                 onClick={() => setIsSaving(!isSaving)}
-                className="flex items-center gap-1 px-2 py-1 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-md text-[10px] font-bold hover:bg-sky-500/20 transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-lg text-[10px] font-bold hover:bg-sky-500/20 transition-colors cursor-pointer"
               >
                 <Save size={12} /> Save Layout
               </button>
@@ -173,24 +209,30 @@ export const Sidebar: React.FC = () => {
             </form>
           )}
 
-          <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-zinc-950">
+          <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-none">
             {floorTemplates.map((template) => (
               <div 
                 key={template.id} 
-                className="group relative flex items-center justify-between p-2 border border-zinc-800 rounded-xl bg-zinc-900/20 hover:bg-amber-500/5 hover:border-amber-500/30 transition-all text-left"
+                className="group relative flex items-center justify-between p-2.5 border border-slate-900 rounded-xl bg-slate-900/10 hover:bg-amber-500/5 hover:border-amber-500/30 transition-all text-left"
               >
                 <Tooltip content={template.description || "Click to load layout onto the active floor"} className="flex-1" position="right">
                   <button
                     onClick={() => {
-                      const activeFloorName = floors[activeFloorIndex]?.name || `Level ${floors[activeFloorIndex]?.level}`;
-                      if (window.confirm(`Overwrite "${activeFloorName}" layout with "${template.name}"?`)) {
+                      const activeFloorGrid = floors[activeFloorIndex]?.grid;
+                      const isBlank = !activeFloorGrid || activeFloorGrid.every(row => row.every(cell => cell === 'empty'));
+                      if (isBlank) {
                         loadFloorTemplate(template.id);
+                      } else {
+                        const activeFloorName = floors[activeFloorIndex]?.name || `Level ${floors[activeFloorIndex]?.level}`;
+                        if (window.confirm(`Overwrite "${activeFloorName}" layout with "${template.name}"?`)) {
+                          loadFloorTemplate(template.id);
+                        }
                       }
                     }}
-                    className="w-full text-left"
+                    className="w-full text-left cursor-pointer"
                   >
-                    <div className="font-bold text-zinc-250 text-xs truncate max-w-[140px]">{template.name}</div>
-                    <div className="text-[9px] text-zinc-500">
+                    <div className="font-extrabold text-slate-200 text-xs truncate max-w-[140px]">{template.name}</div>
+                    <div className="text-[9px] text-slate-500 font-mono mt-0.5">
                       {template.isBuiltIn ? "Built-In Layout" : "Custom Layout"}
                     </div>
                   </button>
@@ -203,7 +245,7 @@ export const Sidebar: React.FC = () => {
                         deleteFloorTemplate(template.id);
                       }
                     }}
-                    className="text-zinc-500 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors opacity-0 group-hover:opacity-100 absolute right-1.5 top-1/2 -translate-y-1/2"
+                    className="text-slate-500 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors opacity-0 group-hover:opacity-100 absolute right-1.5 top-1/2 -translate-y-1/2 cursor-pointer"
                   >
                     <Trash2 size={12} />
                   </button>
@@ -214,15 +256,15 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-4 bg-zinc-950 border-t border-zinc-800 shrink-0">
+      <div className="p-4 bg-slate-950 border-t border-slate-900 shrink-0">
         <Tooltip content="WARNING: Wipes all floors, hires, and configurations, starting fresh from Ground Floor." className="w-full">
           <button 
             onClick={() => {
               resetAll();
             }}
-            className="w-full py-2 bg-rose-950/15 hover:bg-rose-950/30 border border-rose-900/20 text-rose-400 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-rose-950/10 hover:bg-rose-950/25 border border-rose-900/35 text-rose-400 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer select-none"
           >
-            <Trash2 size={14} />
+            <Trash2 size={13} />
             Reset Project
           </button>
         </Tooltip>

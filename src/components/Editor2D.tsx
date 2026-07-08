@@ -25,7 +25,17 @@ const getTileColor = (type: TileType | 'eraser' | 'text') => {
 };
 
 export const Editor2D: React.FC = () => {
-  const { floors, activeFloorIndex, selectedTool, setTile, addLabel, removeLabel, guests } = useHotelStore();
+  const { 
+    floors, 
+    activeFloorIndex, 
+    selectedTool, 
+    setTile, 
+    addLabel, 
+    removeLabel, 
+    guests,
+    elevatorSystemMode,
+    setElevatorSystemMode
+  } = useHotelStore();
   const [isDrawing, setIsDrawing] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [zoom, setZoom] = useState(1);
@@ -294,6 +304,41 @@ export const Editor2D: React.FC = () => {
                 >
                   Cancel
                 </button>
+              </div>
+            )}
+
+            {selectedTool === 'elevator' && (
+              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-slate-900/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-purple-500/30 flex items-center gap-3.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🛗</span>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-purple-400 font-mono">Elevator Setup Choice</p>
+                    <p className="text-[9px] text-slate-400">Select active drive algorithm</p>
+                  </div>
+                </div>
+                <div className="h-6 w-px bg-slate-800"></div>
+                <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800/80">
+                  <button
+                    onClick={() => setElevatorSystemMode('standard')}
+                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all cursor-pointer ${
+                      elevatorSystemMode === 'standard'
+                        ? 'bg-purple-600 text-white shadow shadow-purple-600/30 font-black'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Standard Mode
+                  </button>
+                  <button
+                    onClick={() => setElevatorSystemMode('dcs')}
+                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all cursor-pointer ${
+                      elevatorSystemMode === 'dcs'
+                        ? 'bg-purple-600 text-white shadow shadow-purple-600/30 font-black'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    KONE Polaris DCS
+                  </button>
+                </div>
               </div>
             )}
           </div>

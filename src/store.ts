@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { Floor, TileType, ViewMode, Label, AppMode, StaffNPC, GuestNPC, HotelData, StaffTask, RoomRates, GuestState, FloorTemplate, Milestone, Brand, HotelChain, RoomCategory, BonusProgram } from './types';
+import { Floor, TileType, ViewMode, Label, AppMode, StaffNPC, GuestNPC, HotelData, StaffTask, RoomRates, GuestState, FloorTemplate, Milestone, Brand, HotelChain, RoomCategory, BonusProgram, ChainPreset, Collaborator, CollaboratorProvisions } from './types';
 import { PRESETS } from './presets';
 import { auth, db } from './firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { User, signInWithPopup, signOut } from 'firebase/auth';
 import { googleProvider } from './firebase';
 import confetti from 'canvas-confetti';
@@ -11,41 +11,141 @@ const GRID_SIZE = 20;
 
 const createEmptyGrid = () => Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill('empty'));
 
-export const DEFAULT_BRANDS: Brand[] = [
+export const CHAIN_PRESETS: ChainPreset[] = [
   {
-    id: 'b-budget',
-    name: 'Apex Budget',
-    description: 'Affordable, clean, dense layouts with classic service, but low overhead costs.',
-    vipMultiplier: 0.8,
-    bedMultiplier: 0.8,
-    styleColor: 'from-blue-600/20 to-blue-900/10 border-blue-500/30 text-blue-400',
-    vipSpawnRate: 0.08,
-    icon: '💰',
-    color: 'from-blue-500 to-cyan-500'
+    id: 'c-marriott',
+    name: 'Marriott International',
+    description: 'A global hospitality leader offering select corporate comfort, natural design, and legendary world-class luxury.',
+    icon: '🏨',
+    brands: [
+      {
+        id: 'b-courtyard',
+        name: 'Courtyard by Marriott',
+        description: 'Modern, business-focused environment. High-efficiency beds and professional service with low overhead.',
+        vipMultiplier: 1.1,
+        bedMultiplier: 1.0,
+        styleColor: 'from-blue-600/20 to-blue-900/10 border-blue-500/30 text-blue-400',
+        vipSpawnRate: 0.12,
+        icon: '💼',
+        color: 'from-blue-500 to-indigo-500'
+      },
+      {
+        id: 'b-jwmarriott',
+        name: 'JW Marriott Resort',
+        description: 'Mindful luxury and nature-infused spaces. Plants and decorative tables gain double guest satisfaction!',
+        vipMultiplier: 1.4,
+        bedMultiplier: 1.2,
+        styleColor: 'from-emerald-600/20 to-emerald-900/10 border-emerald-500/30 text-emerald-400',
+        vipSpawnRate: 0.22,
+        icon: '🍃',
+        color: 'from-emerald-500 to-teal-500'
+      },
+      {
+        id: 'b-ritzcarlton',
+        name: 'The Ritz-Carlton',
+        description: 'The absolute gold standard in luxury. Double VIP spawn rate, high-end guest treatment, and supreme price margins.',
+        vipMultiplier: 2.0,
+        bedMultiplier: 1.8,
+        styleColor: 'from-amber-600/20 to-amber-900/10 border-amber-500/30 text-amber-400',
+        vipSpawnRate: 0.38,
+        icon: '👑',
+        color: 'from-amber-500 to-amber-700'
+      }
+    ]
   },
   {
-    id: 'b-eco',
-    name: 'EcoZen Retreat',
-    description: 'Eco-friendly and natural design focus. Plants and tables gain double satisfaction, fast-tracking guest happiness!',
-    vipMultiplier: 1.2,
-    bedMultiplier: 1.1,
-    styleColor: 'from-emerald-600/20 to-emerald-900/10 border-emerald-500/30 text-emerald-400',
-    vipSpawnRate: 0.18,
-    icon: '🍃',
-    color: 'from-emerald-500 to-teal-500'
+    id: 'c-radisson',
+    name: 'Radisson Hotel Group',
+    description: 'Sleek Scandinavian hospitality focusing on natural elements, balanced design, and high-density modern comfort.',
+    icon: '🛋️',
+    brands: [
+      {
+        id: 'b-radissonred',
+        name: 'Radisson RED',
+        description: 'Playful, tech-forward aesthetic. Vibrant layouts, creative capsule setups, and fast-track robotic services.',
+        vipMultiplier: 1.0,
+        bedMultiplier: 0.9,
+        styleColor: 'from-rose-600/20 to-rose-900/10 border-rose-500/30 text-rose-400',
+        vipSpawnRate: 0.10,
+        icon: '🎈',
+        color: 'from-rose-500 to-red-600'
+      },
+      {
+        id: 'b-radissonblu',
+        name: 'Radisson Blu',
+        description: 'Iconic, sophisticated Scandinavian design. Extremely high bed comfort and pristine premium services.',
+        vipMultiplier: 1.5,
+        bedMultiplier: 1.4,
+        styleColor: 'from-cyan-600/20 to-cyan-900/10 border-cyan-500/30 text-cyan-400',
+        vipSpawnRate: 0.20,
+        icon: '🛋️',
+        color: 'from-cyan-500 to-blue-600'
+      }
+    ]
   },
   {
-    id: 'b-luxury',
-    name: 'Grand Luxe Signature',
-    description: 'Extravagant suite experiences, ultra-fast check-ins, and triple the rate of VIP arrivals!',
-    vipMultiplier: 1.8,
-    bedMultiplier: 1.6,
-    styleColor: 'from-amber-600/20 to-amber-900/10 border-amber-500/30 text-amber-400',
-    vipSpawnRate: 0.35,
-    icon: '👑',
-    color: 'from-amber-500 to-orange-500'
+    id: 'c-cosmos',
+    name: 'Cosmos Hotel Group',
+    description: 'Immersive Russian hospitality, Soviet retro-futurism, cosmic architecture, and legendary space-age comfort.',
+    icon: '🚀',
+    brands: [
+      {
+        id: 'b-cosmos-smart',
+        name: 'Cosmos Smart Sputnik',
+        description: 'Soviet retro-futuristic aesthetic. Sputnik sphere accents, high efficiency, and super low building overheads.',
+        vipMultiplier: 0.9,
+        bedMultiplier: 0.9,
+        styleColor: 'from-violet-600/20 to-violet-900/10 border-violet-500/30 text-violet-400',
+        vipSpawnRate: 0.10,
+        icon: '🚀',
+        color: 'from-purple-500 to-violet-600'
+      },
+      {
+        id: 'b-cosmos-collection',
+        name: 'Cosmos Collection Palace',
+        description: 'Grand historic palaces. Russian imperial aesthetics, opulent gold trims, and stellar prestige ratings.',
+        vipMultiplier: 1.8,
+        bedMultiplier: 1.6,
+        styleColor: 'from-fuchsia-600/20 to-fuchsia-900/10 border-fuchsia-500/30 text-fuchsia-400',
+        vipSpawnRate: 0.30,
+        icon: '🏰',
+        color: 'from-fuchsia-500 to-pink-600'
+      }
+    ]
+  },
+  {
+    id: 'c-rixos',
+    name: 'Rixos Hotels & Resorts',
+    description: 'Lavish Turkish all-inclusive luxury, grand spa hammams, premium champagne events, and ultimate wellness sanctuaries.',
+    icon: '⚜️',
+    brands: [
+      {
+        id: 'b-rixospremium',
+        name: 'Rixos Premium',
+        description: 'Luxury seaside vibes. Premium Turkish hospitality, custom gold service, and high satisfaction ratings.',
+        vipMultiplier: 1.7,
+        bedMultiplier: 1.5,
+        styleColor: 'from-yellow-600/20 to-yellow-900/10 border-yellow-500/30 text-yellow-400',
+        vipSpawnRate: 0.28,
+        icon: '⚜️',
+        color: 'from-yellow-500 to-amber-600'
+      },
+      {
+        id: 'b-rixosroyal',
+        name: 'Rixos Royal Spa Retreat',
+        description: 'Ultimate wellness spa retreats. All-inclusive luxury, extreme VIP spawn multipliers, and maximum relaxation levels.',
+        vipMultiplier: 2.2,
+        bedMultiplier: 2.0,
+        styleColor: 'from-orange-600/20 to-orange-900/10 border-orange-500/30 text-orange-400',
+        vipSpawnRate: 0.45,
+        icon: '👑',
+        color: 'from-orange-500 to-yellow-500'
+      }
+    ]
   }
 ];
+
+export const DEFAULT_BRANDS: Brand[] = CHAIN_PRESETS.flatMap(c => c.brands);
 
 const getInitialMilestones = (): Milestone[] => [
   { id: 'm-floors-2', title: 'Growing Upward', description: 'Reach 2 hotel floors.', targetType: 'floors', targetValue: 2, unlocked: false, rarity: 'bronze' },
@@ -319,6 +419,11 @@ interface HotelStore {
   customBrands: Brand[];
   activeHotelBrandId: string;
 
+  playerName: string;
+  onboardingCompleted: boolean;
+  hotelLocation: { address: string; lat?: number; lng?: number; sceneryTheme: 'city' | 'beach' | 'mountain' | 'forest' | 'desert'; };
+  setOnboarding: (playerName: string, chainName: string, brandId: string, customBrandObj: Brand | null, hotelName: string, location: { address: string; lat?: number; lng?: number; sceneryTheme: 'city' | 'beach' | 'mountain' | 'forest' | 'desert'; }) => void;
+
   // Chain-level actions
   setChainName: (name: string) => void;
   setActiveHotel: (hotelId: string) => void;
@@ -380,10 +485,70 @@ interface HotelStore {
   isElevatorMoving: boolean;
   elevatorTargetFloor: number | null;
   callElevator: (targetFloor: number) => void;
+  elevatorSystemMode: 'standard' | 'dcs';
+  setElevatorSystemMode: (mode: 'standard' | 'dcs') => void;
+
+  // Collaborators & Shared Play State
+  currentSharedOwnerUid: string | null;
+  collaborators: Collaborator[];
+  collaboratorEmails: string[];
+  loadedSharedChains: any[];
+  addCollaborator: (email: string, provisions: CollaboratorProvisions) => Promise<void>;
+  removeCollaborator: (email: string) => Promise<void>;
+  loadSharedChainsList: () => Promise<void>;
+  loadSharedChain: (ownerUid: string) => Promise<void>;
+  stopSharing: () => void;
 }
+
+const checkToiletBedViolation = (floorGrid: string[][]): boolean => {
+  if (!floorGrid) return false;
+  const bedPoints: { x: number, y: number }[] = [];
+  const bathPoints: { x: number, y: number }[] = [];
+  
+  floorGrid.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      if (cell === 'bed') bedPoints.push({ x, y });
+      if (cell === 'bathroom') bathPoints.push({ x, y });
+    });
+  });
+
+  for (const b of bedPoints) {
+    for (const t of bathPoints) {
+      const dx = Math.abs(b.x - t.x);
+      const dy = Math.abs(b.y - t.y);
+      const dist = dx + dy;
+      
+      if (dist === 1) {
+        return true; // Immediately next to each other
+      } else if (dist === 2) {
+        if (dx === 2) {
+          const midX = (b.x + t.x) / 2;
+          const midTile = floorGrid[b.y]?.[midX];
+          if (midTile !== 'wall' && midTile !== 'door') {
+            return true;
+          }
+        } else if (dy === 2) {
+          const midY = (b.y + t.y) / 2;
+          const midTile = floorGrid[midY]?.[b.x];
+          if (midTile !== 'wall' && midTile !== 'door') {
+            return true;
+          }
+        } else {
+          // Diagonal adjacent
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+};
 
 export const useHotelStore = create<HotelStore>((set, get) => ({
   user: null,
+  currentSharedOwnerUid: null,
+  collaborators: [],
+  collaboratorEmails: [],
+  loadedSharedChains: [],
   floors: JSON.parse(JSON.stringify(PRESETS['small-hotel'])),
   money: 15000,
   staff: [
@@ -410,13 +575,25 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
   spectatorMode: false,
   isElevatorMoving: false,
   elevatorTargetFloor: null,
+  elevatorSystemMode: 'dcs',
 
-  chainName: 'Grand Horizon Hotels',
+  playerName: localStorage.getItem('archhotel_player_name') || '',
+  onboardingCompleted: localStorage.getItem('archhotel_onboarding_completed') === 'true',
+  hotelLocation: (() => {
+    try {
+      const stored = localStorage.getItem('archhotel_hotel_location');
+      return stored ? JSON.parse(stored) : { address: 'London, UK', lat: 51.5074, lng: -0.1278, sceneryTheme: 'city' };
+    } catch {
+      return { address: 'London, UK', lat: 51.5074, lng: -0.1278, sceneryTheme: 'city' };
+    }
+  })(),
+
+  chainName: 'Marriott International',
   hotels: [
     {
       id: 'h-1',
-      name: 'Grand Plaza Resort',
-      brandId: 'b-budget',
+      name: 'Courtyard by Marriott Resort',
+      brandId: 'b-courtyard',
       floors: JSON.parse(JSON.stringify(PRESETS['small-hotel'])),
       money: 15000,
       staff: [
@@ -434,7 +611,46 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
   ],
   activeHotelId: 'h-1',
   customBrands: [],
-  activeHotelBrandId: 'b-budget',
+  activeHotelBrandId: 'b-courtyard',
+
+  setOnboarding: (playerName, chainName, brandId, customBrandObj, hotelName, location) => set((state) => {
+    localStorage.setItem('archhotel_player_name', playerName);
+    localStorage.setItem('archhotel_onboarding_completed', 'true');
+    localStorage.setItem('archhotel_hotel_location', JSON.stringify(location));
+
+    const updatedBrands = [...state.customBrands];
+    if (customBrandObj) {
+      updatedBrands.push(customBrandObj);
+    }
+
+    const updatedHotels = state.hotels.map(h => {
+      if (h.id === 'h-1' || h.id === state.activeHotelId) {
+        return {
+          ...h,
+          name: hotelName,
+          brandId: brandId
+        };
+      }
+      return h;
+    });
+
+    setTimeout(() => {
+      const u = get().user;
+      if (u) {
+        get().saveToCloud();
+      }
+    }, 150);
+
+    return {
+      playerName,
+      chainName,
+      activeHotelBrandId: brandId,
+      customBrands: updatedBrands,
+      onboardingCompleted: true,
+      hotelLocation: location,
+      hotels: updatedHotels
+    };
+  }),
 
   setChainName: (name) => set({ chainName: name }),
 
@@ -473,7 +689,7 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
     const newHotel: HotelData = {
       id: newHotelId,
       name: name || `Horizon Oasis ${state.hotels.length + 1}`,
-      brandId: brandId || 'b-budget',
+      brandId: brandId || 'b-courtyard',
       floors: startingFloors,
       money: 15000,
       staff: startingStaff,
@@ -589,7 +805,7 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
   },
 
   saveToCloud: async () => {
-    const { user, chainName, customBrands, activeHotelId } = get();
+    const { user, chainName, customBrands, activeHotelId, playerName, onboardingCompleted, hotelLocation } = get();
     if (!user) return;
     try {
       const currentActiveHotels = syncActiveHotelHelper(get());
@@ -597,7 +813,10 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
         chainName: chainName || 'My Hotel Chain',
         activeHotelId: activeHotelId || 'h-1',
         customBrands: customBrands || [],
-        hotels: currentActiveHotels
+        hotels: currentActiveHotels,
+        playerName: playerName || '',
+        onboardingCompleted: onboardingCompleted || false,
+        hotelLocation: hotelLocation || { address: 'London, UK', lat: 51.5074, lng: -0.1278, sceneryTheme: 'city' }
       };
       await setDoc(doc(db, 'hotels', user.uid), payload);
       alert('Chain saved to cloud successfully!');
@@ -615,12 +834,17 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
         if (data.hotels && Array.isArray(data.hotels) && data.hotels.length > 0) {
           const activeId = data.activeHotelId || data.hotels[0].id;
           const activeHotel = data.hotels.find((h: any) => h.id === activeId) || data.hotels[0];
+          
+          if (data.playerName) localStorage.setItem('archhotel_player_name', data.playerName);
+          if (data.onboardingCompleted !== undefined) localStorage.setItem('archhotel_onboarding_completed', String(data.onboardingCompleted));
+          if (data.hotelLocation) localStorage.setItem('archhotel_hotel_location', JSON.stringify(data.hotelLocation));
+
           set({
-            chainName: data.chainName || 'Grand Horizon Hotels',
+            chainName: data.chainName || 'Marriott International',
             hotels: data.hotels,
             activeHotelId: activeId,
             customBrands: data.customBrands || [],
-            activeHotelBrandId: activeHotel.brandId || 'b-budget',
+            activeHotelBrandId: activeHotel.brandId || 'b-courtyard',
             floors: activeHotel.floors,
             money: activeHotel.money ?? 15000,
             staff: activeHotel.staff || [],
@@ -628,13 +852,16 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
             roomRates: activeHotel.roomRates || { standard: 50, suite: 120 },
             totalGuestsServed: activeHotel.totalGuestsServed || 0,
             milestones: activeHotel.milestones || getInitialMilestones(),
-            activeFloorIndex: 0
+            activeFloorIndex: 0,
+            playerName: data.playerName || '',
+            onboardingCompleted: data.onboardingCompleted ?? false,
+            hotelLocation: data.hotelLocation || { address: 'London, UK', lat: 51.5074, lng: -0.1278, sceneryTheme: 'city' }
           });
         } else {
           const legacyHotel: HotelData = {
             id: 'h-legacy',
-            name: (data as any).name || 'Grand Plaza Resort',
-            brandId: 'b-budget',
+            name: (data as any).name || 'Courtyard by Marriott Resort',
+            brandId: 'b-courtyard',
             floors: data.floors,
             money: data.money || 10000,
             staff: data.staff || [],
@@ -647,7 +874,7 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
             chainName: 'Legacy Hospitality Chain',
             hotels: [legacyHotel],
             activeHotelId: 'h-legacy',
-            activeHotelBrandId: 'b-budget',
+            activeHotelBrandId: 'b-courtyard',
             customBrands: [],
             floors: legacyHotel.floors,
             money: legacyHotel.money,
@@ -811,7 +1038,10 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
 
     const activeBrand = [...DEFAULT_BRANDS, ...(state.customBrands || [])].find(b => b.id === state.activeHotelBrandId) || DEFAULT_BRANDS[0];
     
-    if (newGuests.length < capacity && Math.random() < 0.1) {
+    const occupancyRate = capacity > 0 ? newGuests.length / capacity : 0;
+    const spawnChance = occupancyRate < 0.3 ? 0.45 : (occupancyRate < 0.7 ? 0.25 : 0.1);
+    
+    if (newGuests.length < capacity && Math.random() < spawnChance) {
       // Find reception
       let receptionX = 10, receptionY = 10, receptionFloor = 0;
       let foundReception = false;
@@ -867,6 +1097,10 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
       const g = { ...guest };
       g.stayDuration++;
 
+      const floorGrid = state.floors[g.floorIndex]?.grid;
+      const hasToiletViolation = floorGrid ? checkToiletBedViolation(floorGrid) : false;
+      g.toiletViolation = hasToiletViolation;
+
       // Handle VIP satisfaction updates
       if (g.isVip) {
         // 1. Check general VIP Service staff task
@@ -915,6 +1149,10 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
           }
         }
         
+        if (hasToiletViolation) {
+          g.vipSatisfaction = Math.max(10, (g.vipSatisfaction || 50) - 2.5);
+        }
+
         // Slight decay to keep it dynamic if no service is matched
         if (!generalService && !g.vipAssignedStaff) {
           g.vipSatisfaction = Math.max(10, (g.vipSatisfaction || 50) - 0.2);
@@ -967,14 +1205,18 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
           }
 
           if (hasPlant) {
-            let plantBoost = (activeBrand.id === 'b-eco' ? 0.8 : 0.4);
+            let plantBoost = (activeBrand.id === 'b-jwmarriott' ? 0.8 : 0.4);
             if (activeProgram?.privileges.includes('organicVibe') && g.enrolledInBonusProgram) {
               plantBoost *= 2.0;
             }
             currentSat = Math.min(100, currentSat + plantBoost);
           }
           if (hasTable) {
-            currentSat = Math.min(100, currentSat + (activeBrand.id === 'b-eco' ? 0.8 : 0.4));
+            currentSat = Math.min(100, currentSat + (activeBrand.id === 'b-jwmarriott' ? 0.8 : 0.4));
+          }
+
+          if (hasToiletViolation) {
+            currentSat = Math.max(10, currentSat - 2.5);
           }
         }
 
@@ -1044,6 +1286,9 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
             }
 
             let candidates = [...angryComments];
+            if (g.toiletViolation) {
+              candidates.push({ text: 'The toilet is too close to the bed! It needs a dividing wall and door! 🚽🛌', emoji: '😭' });
+            }
             if (!hasBathroom) {
               candidates.push({ text: 'Where is the bathroom?! This floor is incomplete! 🚽', emoji: '😭' });
             }
@@ -1074,6 +1319,9 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
               { text: 'Where is my requested champagne service?! 🍾', emoji: '🙄' },
               { text: 'Exorbitant wait times! Horrible staff! ⏳', emoji: '👎' }
             ];
+            if (g.toiletViolation) {
+              vipAngry.push({ text: 'A toilet directly next to my bed without walls or a door is unacceptable! 🚽😡', emoji: '🚨' });
+            }
 
             if (sat >= 80 && Math.random() < 0.6) {
               const pick = vipHappy[Math.floor(Math.random() * vipHappy.length)];
@@ -1166,6 +1414,11 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
                     const cats = state.roomCategories || DEFAULT_ROOM_CATEGORIES;
                     const matchedCat = evaluateFloorRoomCategory(state.floors[f], cats);
                     g.roomCategoryId = matchedCat.id;
+
+                    // Charge check-in booking fee/deposit!
+                    const checkInFee = g.isVip ? 450 : 150;
+                    extraMoney += checkInFee;
+                    g.spent += checkInFee;
 
                     // Loyalty program enrollment
                     if (state.activeBonusProgramId) {
@@ -1322,12 +1575,16 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
             }
           }
           
-          // VIP Guest checkout reward!
+          // VIP/Standard Guest checkout reward!
           if (g.isVip) {
             let payout = 1200 + (g.vipSatisfaction || 50) * 18;
             if (activeProgram?.privileges.includes('vipWelcomeGift') && g.enrolledInBonusProgram) {
               payout = Math.round(payout * 1.35);
             }
+            extraMoney += Math.floor(payout * activeBrand.vipMultiplier);
+          } else {
+            // Standard Guest checkout reward!
+            let payout = 350 + (g.satisfaction || 75) * 5;
             extraMoney += Math.floor(payout * activeBrand.vipMultiplier);
           }
           
@@ -1597,6 +1854,7 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
   }),
   setGraphicsQuality: (quality) => set({ graphicsQuality: quality }),
   setSpectatorMode: (enabled) => set({ spectatorMode: enabled }),
+  setElevatorSystemMode: (mode) => set({ elevatorSystemMode: mode }),
 
   callElevator: (targetFloor) => {
     set({ isElevatorMoving: true, elevatorTargetFloor: targetFloor });
@@ -1622,8 +1880,8 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
     ];
     const defaultHotel: HotelData = {
       id: 'h-1',
-      name: 'Grand Plaza Resort',
-      brandId: 'b-budget',
+      name: 'Courtyard by Marriott Resort',
+      brandId: 'b-courtyard',
       floors: startingFloors,
       money: 15000,
       staff: startingStaff,
@@ -1636,10 +1894,10 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
       milestones: getInitialMilestones()
     };
     return { 
-      chainName: 'Grand Horizon Hotels',
+      chainName: 'Marriott International',
       hotels: [defaultHotel],
       activeHotelId: 'h-1',
-      activeHotelBrandId: 'b-budget',
+      activeHotelBrandId: 'b-courtyard',
       customBrands: [],
       floors: defaultHotel.floors,
       activeFloorIndex: 0, 
@@ -1776,5 +2034,110 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
     const nextActiveId = state.activeBonusProgramId === id ? null : state.activeBonusProgramId;
     const synced = syncActiveHotelHelper({ ...state, bonusPrograms: programs, activeBonusProgramId: nextActiveId });
     return { bonusPrograms: programs, activeBonusProgramId: nextActiveId, hotels: synced };
-  })
+  }),
+
+  addCollaborator: async (email: string, provisions: CollaboratorProvisions) => {
+    const { user, collaborators, collaboratorEmails } = get();
+    const ownerUid = user?.uid || 'sim-owner-uid';
+    
+    const newCollab: Collaborator = {
+      email,
+      provisions,
+      addedAt: new Date().toISOString()
+    };
+
+    const updatedCollaborators = [...collaborators.filter(c => c.email !== email), newCollab];
+    const updatedEmails = Array.from(new Set([...collaboratorEmails, email]));
+
+    set({ 
+      collaborators: updatedCollaborators,
+      collaboratorEmails: updatedEmails
+    });
+
+    try {
+      const chainDocRef = doc(db, 'shared_chains', ownerUid);
+      await setDoc(chainDocRef, {
+        ownerUid,
+        chainName: get().hotels[0]?.name || "Elite Hotel Chain",
+        collaborators: updatedCollaborators,
+        collaboratorEmails: updatedEmails,
+        hotels: get().hotels,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.error("Error syncing added collaborator to Firestore:", err);
+    }
+  },
+
+  removeCollaborator: async (email: string) => {
+    const { user, collaborators, collaboratorEmails } = get();
+    const ownerUid = user?.uid || 'sim-owner-uid';
+
+    const updatedCollaborators = collaborators.filter(c => c.email !== email);
+    const updatedEmails = collaboratorEmails.filter(e => e !== email);
+
+    set({ 
+      collaborators: updatedCollaborators,
+      collaboratorEmails: updatedEmails
+    });
+
+    try {
+      const chainDocRef = doc(db, 'shared_chains', ownerUid);
+      await setDoc(chainDocRef, {
+        collaborators: updatedCollaborators,
+        collaboratorEmails: updatedEmails,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.error("Error syncing removed collaborator to Firestore:", err);
+    }
+  },
+
+  loadSharedChainsList: async () => {
+    const { user } = get();
+    const userEmail = user?.email || 'helper@archhotel.com';
+    
+    try {
+      const q = query(
+        collection(db, 'shared_chains'),
+        where('collaboratorEmails', 'array-contains', userEmail)
+      );
+      const querySnapshot = await getDocs(q);
+      const loadedSharedChains: any[] = [];
+      querySnapshot.forEach((doc) => {
+        loadedSharedChains.push(doc.data());
+      });
+      set({ loadedSharedChains });
+    } catch (err) {
+      console.error("Error loading shared chains:", err);
+    }
+  },
+
+  loadSharedChain: async (ownerUid: string) => {
+    try {
+      const docRef = doc(db, 'shared_chains', ownerUid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        set({
+          currentSharedOwnerUid: ownerUid,
+          hotels: data.hotels || [],
+          activeHotelId: data.hotels?.[0]?.id || '',
+          floors: data.hotels?.[0]?.floors || [],
+          money: data.hotels?.[0]?.money || 15000,
+          staff: data.hotels?.[0]?.staff || []
+        });
+      }
+    } catch (err) {
+      console.error("Error loading shared chain:", err);
+      throw err;
+    }
+  },
+
+  stopSharing: () => {
+    set({
+      currentSharedOwnerUid: null,
+    });
+    get().loadPreset('small-hotel');
+  }
 }));

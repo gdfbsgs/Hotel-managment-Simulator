@@ -359,6 +359,7 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
   const yaw = useRef(0);
   const pitch = useRef(0);
   const isDragging = useRef(false);
+  const draggingPointerId = useRef<number | null>(null);
   const prevX = useRef(0);
   const prevY = useRef(0);
   const bobTimer = useRef(0);
@@ -411,13 +412,16 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
       if (target.closest('.no-pointer-lock') || target.closest('.joystick-container')) {
         return;
       }
-      isDragging.current = true;
-      prevX.current = e.clientX;
-      prevY.current = e.clientY;
+      if (draggingPointerId.current === null) {
+        draggingPointerId.current = e.pointerId;
+        isDragging.current = true;
+        prevX.current = e.clientX;
+        prevY.current = e.clientY;
+      }
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!isDragging.current) return;
+      if (!isDragging.current || e.pointerId !== draggingPointerId.current) return;
       const deltaX = e.clientX - prevX.current;
       const deltaY = e.clientY - prevY.current;
       prevX.current = e.clientX;
@@ -428,8 +432,11 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
       pitch.current = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch.current)); // clamp gaze
     };
 
-    const handlePointerUp = () => {
-      isDragging.current = false;
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.pointerId === draggingPointerId.current) {
+        isDragging.current = false;
+        draggingPointerId.current = null;
+      }
     };
 
     window.addEventListener('pointerdown', handlePointerDown);
@@ -1035,7 +1042,7 @@ const MovingCabin = ({ x, y, w, h }: { x: number, y: number, w: number, h: numbe
 };
 
 const MergedElevator = ({ x, y, w, h, floorLevel, floorIndex }: { x: number, y: number, w: number, h: number, floorLevel: number, floorIndex: number }) => {
-  const { activeFloorIndex, isElevatorMoving, floors } = useHotelStore();
+  const { activeFloorIndex, isElevatorMoving, floors, elevatorSystemMode } = useHotelStore();
   const leftDoorRef = useRef<THREE.Group>(null);
   const rightDoorRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -1127,8 +1134,11 @@ const MergedElevator = ({ x, y, w, h, floorLevel, floorIndex }: { x: number, y: 
         position={[w * TILE_SIZE * 0.42, 1.5, h * TILE_SIZE * 0.48 + 0.15]}
         onClick={(e) => {
           e.stopPropagation();
-          // Open the interactive KONE elevator console
-          window.dispatchEvent(new CustomEvent('open-kone-portal', { detail: { floorIndex } }));
+          if (elevatorSystemMode === 'standard') {
+            window.dispatchEvent(new CustomEvent('open-standard-portal', { detail: { floorIndex } }));
+          } else {
+            window.dispatchEvent(new CustomEvent('open-kone-portal', { detail: { floorIndex } }));
+          }
         }}
         onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
         onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
@@ -1271,8 +1281,223 @@ const TileModel = ({ type, position }: { type: TileType; position: [number, numb
   }
 };
 
+const EnvironmentScenery: React.FC<{ sceneryTheme?: 'city' | 'beach' | 'mountain' | 'forest' | 'desert' }> = ({ sceneryTheme = 'city' }) => {
+  // We can render random scenic elements scattered around the hotel
+  // Let's seed random coords so they remain static on re-renders
+  const cityBuildings = React.useMemo(() => {
+    const buildings = [];
+    for (let i = 0; i < 35; i++) {
+      const angle = (i / 35) * Math.PI * 2 + (Math.random() - 0.5) * 0.1;
+      const distance = 45 + Math.random() * 40;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      const width = 4 + Math.random() * 6;
+      const height = 15 + Math.random() * 35;
+      const depth = 4 + Math.random() * 6;
+      const hue = Math.random() * 30 + 200; // Blueish skyscraper lights
+      buildings.push({ x, z, width, height, depth, color: `hsl(${hue}, 20%, 30%)` });
+    }
+    return buildings;
+  }, []);
+
+  const palms = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 25; i++) {
+      const angle = (i / 25) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+      const distance = 25 + Math.random() * 15;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({ x, z, scale: 0.6 + Math.random() * 0.8 });
+    }
+    return items;
+  }, []);
+
+  const mountains = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+      const distance = 60 + Math.random() * 30;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      const height = 25 + Math.random() * 25;
+      const radius = 12 + Math.random() * 10;
+      items.push({ x, z, height, radius });
+    }
+    return items;
+  }, []);
+
+  const forestTrees = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 60; i++) {
+      const angle = (i / 60) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+      const distance = 24 + Math.random() * 35;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({ x, z, height: 2 + Math.random() * 3, scale: 0.7 + Math.random() * 0.6 });
+    }
+    return items;
+  }, []);
+
+  const desertDunes = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 15; i++) {
+      const angle = (i / 15) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const distance = 30 + Math.random() * 35;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({ x, z, rx: 15 + Math.random() * 15, rz: 8 + Math.random() * 8, h: 2 + Math.random() * 2 });
+    }
+    return items;
+  }, []);
+
+  if (sceneryTheme === 'beach') {
+    return (
+      <group>
+        {/* Ocean plane overlay */}
+        <mesh position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[500, 500]} />
+          <meshStandardMaterial color="#0284c7" opacity={0.65} transparent roughness={0.1} />
+        </mesh>
+        {/* Palm Trees */}
+        {palms.map((p, idx) => (
+          <group key={idx} position={[p.x, 0, p.z]} scale={[p.scale, p.scale, p.scale]}>
+            <mesh position={[0, 2.5, 0]}>
+              <cylinderGeometry args={[0.15, 0.25, 5, 8]} />
+              <meshStandardMaterial color="#78350f" roughness={0.9} />
+            </mesh>
+            <mesh position={[0, 5, 0]} rotation={[0, 0, 0.2]}>
+              <coneGeometry args={[1.5, 1, 5]} />
+              <meshStandardMaterial color="#166534" roughness={0.7} />
+            </mesh>
+            <mesh position={[0, 4.8, 0]} rotation={[0.2, 2, -0.1]}>
+              <coneGeometry args={[1.6, 0.8, 5]} />
+              <meshStandardMaterial color="#15803d" roughness={0.7} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
+  }
+
+  if (sceneryTheme === 'mountain') {
+    return (
+      <group>
+        {/* Snowy Horizon Mountains */}
+        {mountains.map((m, idx) => (
+          <group key={idx} position={[m.x, 0, m.z]}>
+            <mesh position={[0, m.height / 2, 0]}>
+              <coneGeometry args={[m.radius, m.height, 6]} />
+              <meshStandardMaterial color="#475569" roughness={0.9} flatShading />
+            </mesh>
+            <mesh position={[0, m.height * 0.8, 0]}>
+              <coneGeometry args={[m.radius * 0.3, m.height * 0.4, 6]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.8} />
+            </mesh>
+          </group>
+        ))}
+        {/* Pines */}
+        {forestTrees.slice(0, 30).map((t, idx) => (
+          <group key={idx} position={[t.x, 0, t.z]} scale={[t.scale, t.scale, t.scale]}>
+            <mesh position={[0, 0.8, 0]}>
+              <cylinderGeometry args={[0.1, 0.15, 1.6, 6]} />
+              <meshStandardMaterial color="#451a03" />
+            </mesh>
+            <mesh position={[0, 1.8, 0]}>
+              <coneGeometry args={[0.7, 1.4, 6]} />
+              <meshStandardMaterial color="#065f46" flatShading />
+            </mesh>
+            <mesh position={[0, 2.5, 0]}>
+              <coneGeometry args={[0.5, 1.1, 6]} />
+              <meshStandardMaterial color="#047857" flatShading />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
+  }
+
+  if (sceneryTheme === 'forest') {
+    return (
+      <group>
+        {/* Lots of green trees */}
+        {forestTrees.map((t, idx) => (
+          <group key={idx} position={[t.x, 0, t.z]} scale={[t.scale, t.scale, t.scale]}>
+            <mesh position={[0, t.height / 2, 0]}>
+              <cylinderGeometry args={[0.15, 0.22, t.height, 8]} />
+              <meshStandardMaterial color="#451a03" />
+            </mesh>
+            <mesh position={[0, t.height + 0.6, 0]}>
+              <sphereGeometry args={[1.1, 8, 8]} />
+              <meshStandardMaterial color="#166534" roughness={0.8} />
+            </mesh>
+            <mesh position={[0.4, t.height + 1.1, -0.2]} scale={[0.8, 0.8, 0.8]}>
+              <sphereGeometry args={[1.0, 8, 8]} />
+              <meshStandardMaterial color="#15803d" roughness={0.8} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
+  }
+
+  if (sceneryTheme === 'desert') {
+    return (
+      <group>
+        {/* Sandy dunes */}
+        {desertDunes.map((d, idx) => (
+          <mesh key={idx} position={[d.x, -0.05, d.z]} scale={[d.rx, d.h, d.rz]} rotation={[0.1, Math.random(), 0]}>
+            <sphereGeometry args={[1, 16, 8]} />
+            <meshStandardMaterial color="#eab308" roughness={1.0} flatShading />
+          </mesh>
+        ))}
+        {/* Palm Trees / Cacti */}
+        {palms.slice(0, 12).map((p, idx) => (
+          <group key={idx} position={[p.x, 0, p.z]} scale={[p.scale * 0.8, p.scale * 0.8, p.scale * 0.8]}>
+            <mesh position={[0, 1.5, 0]}>
+              <cylinderGeometry args={[0.18, 0.18, 3, 8]} />
+              <meshStandardMaterial color="#16a34a" roughness={0.9} />
+            </mesh>
+            <group position={[0, 1.6, 0]}>
+              <mesh position={[0.4, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.13, 0.13, 0.8, 8]} />
+                <meshStandardMaterial color="#16a34a" />
+              </mesh>
+              <mesh position={[0.8, 1.0, 0]}>
+                <cylinderGeometry args={[0.13, 0.13, 1.2, 8]} />
+                <meshStandardMaterial color="#16a34a" />
+              </mesh>
+            </group>
+            <group position={[0, 1.0, 0]} rotation={[0, Math.PI, 0]}>
+              <mesh position={[0.4, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.13, 0.13, 0.8, 8]} />
+                <meshStandardMaterial color="#16a34a" />
+              </mesh>
+              <mesh position={[0.8, 1.0, 0]}>
+                <cylinderGeometry args={[0.13, 0.13, 1.2, 8]} />
+                <meshStandardMaterial color="#16a34a" />
+              </mesh>
+            </group>
+          </group>
+        ))}
+      </group>
+    );
+  }
+
+  // DEFAULT/CITY Skyline
+  return (
+    <group>
+      {cityBuildings.map((b, idx) => (
+        <mesh key={idx} position={[b.x, b.height / 2 - 0.1, b.z]}>
+          <boxGeometry args={[b.width, b.height, b.depth]} />
+          <meshStandardMaterial color={b.color} roughness={0.3} metalness={0.1} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
-  const { floors, guests, staff, activeFloorIndex, setActiveFloor } = useHotelStore();
+  const { floors, guests, staff, activeFloorIndex, setActiveFloor, hotelLocation } = useHotelStore();
 
   // --- KONE Polaris DCS Elevator States & Logic ---
   const [konePortalOpen, setKonePortalOpen] = useState(false);
@@ -1285,6 +1510,10 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
     "KONE Polaris DCS online. Destination-ready."
   ]);
   const [dispatchLogs, setDispatchLogs] = useState<string[]>([]);
+  
+  // Standard Elevator Mode Portal States
+  const [standardPortalOpen, setStandardPortalOpen] = useState(false);
+  const [standardOriginFloor, setStandardOriginFloor] = useState(activeFloorIndex);
   
   const { isElevatorMoving, callElevator } = useHotelStore();
 
@@ -1303,9 +1532,16 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
       const floorName = floorObj?.name || `Floor ${idx + 1}`;
       addVoiceLog(`Stanchion called from ${floorName}. Standing by.`);
     };
+    const handleOpenStandard = (e: CustomEvent<{ floorIndex: number }>) => {
+      const idx = e.detail.floorIndex ?? activeFloorIndex;
+      setStandardOriginFloor(idx);
+      setStandardPortalOpen(true);
+    };
     window.addEventListener('open-kone-portal' as any, handleOpenKone);
+    window.addEventListener('open-standard-portal' as any, handleOpenStandard);
     return () => {
       window.removeEventListener('open-kone-portal' as any, handleOpenKone);
+      window.removeEventListener('open-standard-portal' as any, handleOpenStandard);
     };
   }, [floors, activeFloorIndex]);
 
@@ -1498,16 +1734,35 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
             maxPolarAngle={Math.PI / 2 - 0.05}
           />
         )}
-        <Sky sunPosition={[100, 20, 100]} turbidity={0.1} rayleigh={0.5} />
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[10, 20, 10]} intensity={1.5} castShadow />
+        <Sky 
+          sunPosition={hotelLocation?.sceneryTheme === 'desert' ? [100, 5, 10] : [100, 20, 100]} 
+          turbidity={hotelLocation?.sceneryTheme === 'desert' ? 2.5 : 0.1} 
+          rayleigh={hotelLocation?.sceneryTheme === 'desert' ? 2.0 : 0.5} 
+        />
+        <ambientLight intensity={hotelLocation?.sceneryTheme === 'desert' ? 0.45 : 0.4} color={hotelLocation?.sceneryTheme === 'desert' ? '#ffedd5' : '#ffffff'} />
+        <directionalLight 
+          position={[10, 20, 10]} 
+          intensity={1.5} 
+          castShadow 
+          color={hotelLocation?.sceneryTheme === 'desert' ? '#f97316' : '#ffffff'}
+        />
         <directionalLight position={[-10, 10, -10]} intensity={0.5} />
         
         {/* Ground Plane */}
         <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[200, 200]} />
-          <meshStandardMaterial color="#0f172a" />
+          <planeGeometry args={[500, 500]} />
+          <meshStandardMaterial 
+            color={
+              hotelLocation?.sceneryTheme === 'beach' ? '#ca8a04' :
+              hotelLocation?.sceneryTheme === 'mountain' ? '#15803d' :
+              hotelLocation?.sceneryTheme === 'forest' ? '#14532d' :
+              hotelLocation?.sceneryTheme === 'desert' ? '#eab308' :
+              '#0f172a'
+            } 
+          />
         </mesh>
+
+        <EnvironmentScenery sceneryTheme={hotelLocation?.sceneryTheme} />
 
         <group position={[-offsetX, 0, -offsetZ]}>
           {/* Render the physical moving elevator cabins for all elevator shafts! */}
@@ -2052,6 +2307,62 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
                 <ShieldAlert size={12} />
                 <span>Alarm</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STANDARD ELEVATOR INTERACTIVE HUD PORTAL */}
+      {standardPortalOpen && (
+        <div id="standard-elevator-modal" className="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-slate-900 border-2 border-slate-750 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-slate-950 to-slate-900 p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                    Standard Elevator
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-mono">Analog Point-to-Point Controller</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setStandardPortalOpen(false)}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Standard Floor Selection Grid */}
+            <div className="p-6 flex flex-col gap-4">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono">Select Destination Floor</span>
+              <div className="grid grid-cols-3 gap-3">
+                {floors.map((floor, idx) => {
+                  const isCurrent = idx === standardOriginFloor;
+                  return (
+                    <button
+                      key={floor.level}
+                      onClick={() => {
+                        if (idx === standardOriginFloor) return;
+                        callElevator(idx);
+                        setActiveFloor(idx);
+                        setStandardPortalOpen(false);
+                      }}
+                      disabled={isCurrent}
+                      className={`py-3 rounded-xl border font-mono text-sm font-black transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                        isCurrent
+                          ? 'bg-blue-500/10 border-blue-500 text-blue-400 opacity-60 cursor-not-allowed'
+                          : 'bg-slate-950/40 border-slate-800 hover:bg-blue-500 hover:text-slate-950 hover:border-blue-400'
+                      }`}
+                    >
+                      <span className="text-lg">{idx + 1}F</span>
+                      <span className="text-[8px] font-sans font-bold uppercase truncate max-w-full px-1">{floor.name?.split(':')[0] || `Level ${floor.level}`}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
