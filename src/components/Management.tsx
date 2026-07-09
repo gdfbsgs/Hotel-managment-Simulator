@@ -123,7 +123,7 @@ export const Management: React.FC = () => {
   floors.forEach(floor => {
     floor.grid.forEach(row => {
       row.forEach(cell => {
-        if (cell === 'bed') totalBeds++;
+        if (cell === 'bed' || cell === 'bed_single' || cell === 'bed_double') totalBeds++;
         if (cell !== 'empty') totalArea += 4; // 2x2m
         if (cell === 'elevator') totalElevators++;
         if (cell === 'plant') totalPlants++;
@@ -183,7 +183,7 @@ export const Management: React.FC = () => {
   };
 
   const toggleRequiredTile = (tile: string) => {
-    if (tile === 'bed') return; // Bed is always required for any room
+    if (tile === 'bed' || tile === 'bed_single' || tile === 'bed_double') return; // Bed is always required for any room
     setNewCatRequired(prev => 
       prev.includes(tile) ? prev.filter(t => t !== tile) : [...prev, tile]
     );

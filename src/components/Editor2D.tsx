@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHotelStore } from '../store';
 import { TileType } from '../types';
-import { ZoomIn, ZoomOut, Maximize, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, X, Hand, Move, Camera, Info, RotateCw, Trash2 } from 'lucide-react';
+import { SnapshotModal } from './SnapshotModal';
+import { FloorInfoOverlay } from './FloorInfoOverlay';
 
 const GRID_SIZE = 20;
 const BASE_TILE_SIZE = 40; // in pixels
@@ -12,7 +14,9 @@ const getTileColor = (type: TileType | 'eraser' | 'text') => {
     case 'wall': return 'bg-slate-500 border border-slate-400/40';
     case 'door': return 'bg-amber-600 border border-amber-500/40';
     case 'window': return 'bg-sky-500/80 border border-sky-400/40 shadow-[0_0_6px_rgba(56,189,248,0.3)]';
-    case 'bed': return 'bg-rose-500/80 border border-rose-400/40';
+    case 'bed':
+    case 'bed_single': return 'bg-rose-500/80 border border-rose-400/40 relative after:content-["🛏️"] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-[11px]';
+    case 'bed_double': return 'bg-rose-600 border border-rose-400/50 relative after:content-["🛌"] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-[13px]';
     case 'reception': return 'bg-orange-600 border border-orange-500/40';
     case 'staff': return 'bg-rose-600 border border-rose-500/40';
     case 'bathroom': return 'bg-cyan-500/80 border border-cyan-400/40';
@@ -33,18 +37,28 @@ export const Editor2D: React.FC = () => {
     addLabel, 
     removeLabel, 
     guests,
-    elevatorSystemMode,
-    setElevatorSystemMode
+    rotateTile,
   } = useHotelStore();
   const [isDrawing, setIsDrawing] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [zoom, setZoom] = useState(1);
+  
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [selectedTile, setSelectedTile] = useState<{x: number, y: number} | null>(null);
+
+  useEffect(() => {
+    setSelectedTile(null);
+  }, [selectedTool]);
   
   const [startPos, setStartPos] = useState<{x: number, y: number} | null>(null);
   const [drawAxis, setDrawAxis] = useState<'x' | 'y' | null>(null);
 
   const [labelPrompt, setLabelPrompt] = useState<{x: number, y: number} | null>(null);
   const [labelText, setLabelText] = useState('');
+  const [isSnapshotOpen, setIsSnapshotOpen] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   const activeFloor = floors[activeFloorIndex];
   const grid = activeFloor?.grid;
@@ -56,6 +70,15 @@ export const Editor2D: React.FC = () => {
   if (!grid) return null;
 
   const handlePointerDown = (x: number, y: number) => {
+    if (selectedTool === 'select') {
+      const cell = grid[y][x];
+      if (cell !== 'empty') {
+        setSelectedTile({ x, y });
+      } else {
+        setSelectedTile(null);
+      }
+      return;
+    }
     if (selectedTool === 'text') {
       setLabelPrompt({x, y});
       setLabelText('');
@@ -69,6 +92,7 @@ export const Editor2D: React.FC = () => {
   };
 
   const handlePointerEnter = (x: number, y: number) => {
+    if (selectedTool === 'select') return;
     if (isDrawing && selectedTool !== 'text') {
       if (snapToGrid && startPos) {
         let currentAxis = drawAxis;
@@ -95,51 +119,112 @@ export const Editor2D: React.FC = () => {
     setDrawAxis(null);
   };
 
+  const handleOuterPointerDown = (e: React.PointerEvent) => {
+    if (selectedTool === 'select') {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handleOuterPointerMove = (e: React.PointerEvent) => {
+    if (isPanning && selectedTool === 'select') {
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
+      setPanOffset({ x: dx, y: dy });
+    }
+  };
+
+  const handleOuterPointerUp = (e: React.PointerEvent) => {
+    if (isPanning) {
+      setIsPanning(false);
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
-      <div className="h-10 bg-[#0f1620] border-b border-[#1c2638] flex items-center px-4 gap-4 shrink-0 shadow-sm z-10">
-        <div className="flex items-center gap-1 border-r border-[#1c2638] pr-4">
-          <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))} className="p-1 hover:bg-[#151d2b] rounded text-slate-400" title="Zoom Out">
+      <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center px-4 gap-4 shrink-0 shadow-sm z-10">
+        <div className="flex items-center gap-1 border-r border-slate-800 pr-4">
+          <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))} className="p-1 hover:bg-slate-800 rounded text-slate-400" title="Zoom Out">
             <ZoomOut size={16} />
           </button>
           <span className="text-xs font-semibold text-slate-300 w-12 text-center">{Math.round(zoom * 100)}%</span>
-          <button onClick={() => setZoom(z => Math.min(z + 0.2, 3))} className="p-1 hover:bg-[#151d2b] rounded text-slate-400" title="Zoom In">
+          <button onClick={() => setZoom(z => Math.min(z + 0.2, 3))} className="p-1 hover:bg-slate-800 rounded text-slate-400" title="Zoom In">
             <ZoomIn size={16} />
           </button>
-          <button onClick={() => setZoom(1)} className="p-1 hover:bg-[#151d2b] rounded text-slate-400 ml-1" title="Reset Zoom">
+          <button onClick={() => setZoom(1)} className="p-1 hover:bg-slate-800 rounded text-slate-400 ml-1" title="Reset Zoom">
             <Maximize size={16} />
           </button>
+          {(panOffset.x !== 0 || panOffset.y !== 0) && (
+            <button onClick={() => setPanOffset({ x: 0, y: 0 })} className="p-1 hover:bg-slate-800 rounded text-slate-400 ml-1" title="Reset Move/Pan">
+              <Move size={16} className="text-amber-500" />
+            </button>
+          )}
         </div>
+
+        {/* Monochromatic Snapshot Export */}
+        <button
+          onClick={() => setIsSnapshotOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 rounded-lg text-xs font-bold hover:bg-amber-500/20 active:scale-95 transition-all cursor-pointer shadow-sm shadow-amber-500/5 font-mono"
+          title="Export stylized schematic blueprint image of floor plan"
+        >
+          <Camera size={13} className="text-amber-400" />
+          <span>SNAPSHOT</span>
+        </button>
+
+        {/* Floor Statistics & Capacity Info Overlay Toggle */}
+        <button
+          onClick={() => setIsInfoOpen(!isInfoOpen)}
+          className={`flex items-center gap-1.5 px-3 py-1 border rounded-lg text-xs font-bold active:scale-95 transition-all cursor-pointer shadow-sm font-mono ${
+            isInfoOpen 
+              ? 'bg-blue-500/25 text-blue-400 border-blue-500/40 shadow-blue-500/5' 
+              : 'bg-slate-850/60 hover:bg-slate-800 text-slate-300 border-slate-800 hover:text-white'
+          }`}
+          title="Toggle Floor Stats & Room Capacity Overlay"
+        >
+          <Info size={13} className={isInfoOpen ? "text-blue-400" : "text-slate-400"} />
+          <span>FLOOR INFO</span>
+        </button>
+
         <div className="flex items-center gap-2 ml-auto">
           <label className="text-[10px] uppercase font-bold text-slate-500 cursor-pointer" onClick={() => setSnapToGrid(!snapToGrid)}>
             Snap to Grid (Orthogonal)
           </label>
           <button 
-            className={`w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${snapToGrid ? 'bg-[#1fa87c]' : 'bg-[#1c2638]'}`}
+            className={`w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${snapToGrid ? 'bg-amber-500' : 'bg-slate-850'}`}
             onClick={() => setSnapToGrid(!snapToGrid)}
           >
-            <div className={`w-3 h-3 rounded-full transition-transform ${snapToGrid ? 'translate-x-4 bg-[#0a0e14]' : 'translate-x-0 bg-slate-400'}`}></div>
+            <div className={`w-3 h-3 rounded-full transition-transform ${snapToGrid ? 'translate-x-4 bg-slate-950' : 'translate-x-0 bg-slate-400'}`}></div>
           </button>
         </div>
       </div>
       <div 
-        className="flex flex-1 items-center justify-center p-8 overflow-auto touch-none relative bg-[#0a0e14]"
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        className={`flex flex-1 items-center justify-center p-8 overflow-hidden touch-none relative bg-slate-950 ${selectedTool === 'select' ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        onPointerDown={handleOuterPointerDown}
+        onPointerMove={handleOuterPointerMove}
+        onPointerUp={handleOuterPointerUp}
       >
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#1c2638 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-        <div className="relative z-10 bg-[#0f1620] p-3 rounded-2xl shadow-2xl border border-[#1c2638]">
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+        <div 
+          className="relative z-10 bg-slate-900 p-3 rounded-2xl shadow-2xl border border-slate-800 transition-transform duration-75"
+          style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px)` }}
+        >
           <div className="relative">
             <div 
-              className="grid bg-[#0a0e14] gap-[1px] border border-[#151d2b] overflow-hidden rounded-lg"
+              className="grid bg-slate-950 gap-[1px] border border-slate-850 overflow-hidden rounded-lg"
               style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))` }}
             >
               {grid.map((row, y) => (
                 row.map((cell, x) => (
                   <div
                     key={`${x}-${y}`}
-                    className={`${selectedTool === 'text' ? 'cursor-text' : 'cursor-crosshair'} select-none ${getTileColor(cell)} transition-colors duration-75 hover:opacity-85 relative`}
-                    style={{ width: `${BASE_TILE_SIZE * zoom}px`, height: `${BASE_TILE_SIZE * zoom}px` }}
+                    className={`${selectedTool === 'select' ? 'cursor-pointer' : selectedTool === 'text' ? 'cursor-text' : 'cursor-crosshair'} select-none ${getTileColor(cell)} transition-all duration-150 hover:opacity-85 relative`}
+                    style={{ 
+                      width: `${BASE_TILE_SIZE * zoom}px`, 
+                      height: `${BASE_TILE_SIZE * zoom}px`,
+                      transform: activeFloor.rotations?.[y]?.[x] ? `rotate(${activeFloor.rotations[y][x]}deg)` : undefined
+                    }}
                     onPointerDown={(e) => {
                       e.preventDefault();
                       handlePointerDown(x, y);
@@ -152,6 +237,10 @@ export const Editor2D: React.FC = () => {
                   >
                     {prevFloor && prevFloor.grid[y][x] !== 'empty' && cell === 'empty' && (
                       <div className="absolute inset-0 border-[2px] border-slate-750/30 border-dashed pointer-events-none" />
+                    )}
+                    {/* Glowing Selection border */}
+                    {selectedTile?.x === x && selectedTile?.y === y && (
+                      <div className="absolute inset-0 border-[2.5px] border-amber-400 ring-2 ring-amber-400/35 animate-pulse rounded-xs z-20 pointer-events-none" style={{ transform: activeFloor.rotations?.[y]?.[x] ? `rotate(${-activeFloor.rotations[y][x]}deg)` : undefined }} />
                     )}
                   </div>
                 ))
@@ -183,6 +272,72 @@ export const Editor2D: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            {selectedTile && (
+              <div
+                className="absolute flex items-center justify-center pointer-events-none z-50 animate-in fade-in zoom-in-95 duration-100"
+                style={{
+                  left: `${(selectedTile.x + 0.5) * (BASE_TILE_SIZE * zoom) + (selectedTile.x * 1)}px`,
+                  top: `${(selectedTile.y) * (BASE_TILE_SIZE * zoom) + (selectedTile.y * 1) - 14}px`, // slightly above the tile
+                  transform: 'translate(-50%, -100%)'
+                }}
+              >
+                <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 text-slate-100 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] p-2 flex items-center gap-2 pointer-events-auto shrink-0 font-mono scale-95 md:scale-100 select-none">
+                  <div className="flex flex-col px-1.5 py-0.5">
+                    <span className="text-[10px] font-black uppercase text-amber-500 tracking-wider">
+                      {grid[selectedTile.y][selectedTile.x].replace('_', ' ')}
+                    </span>
+                    <span className="text-[8px] text-slate-400 font-bold">
+                      Rotation: {activeFloor.rotations?.[selectedTile.y]?.[selectedTile.x] ?? 0}°
+                    </span>
+                  </div>
+                  
+                  <div className="h-6 w-[1px] bg-slate-800" />
+                  
+                  {/* Rotate CW Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      rotateTile(activeFloorIndex, selectedTile.x, selectedTile.y, 'cw');
+                    }}
+                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-amber-400 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-extrabold"
+                    title="Rotate 90° Clockwise"
+                  >
+                    <RotateCw size={13} className="text-amber-500" />
+                    <span>+90°</span>
+                  </button>
+
+                  {/* Delete Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTile(selectedTile.x, selectedTile.y, 'empty');
+                      setSelectedTile(null);
+                    }}
+                    className="p-1.5 hover:bg-rose-950/40 hover:text-rose-400 rounded-lg text-slate-400 transition-all cursor-pointer"
+                    title="Remove item"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+
+                  <div className="h-6 w-[1px] bg-slate-800" />
+
+                  {/* Close button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTile(null);
+                    }}
+                    className="p-1 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-300 transition-all cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {floorGuests.map(guest => {
               const hasFeedback = guest.feedback && Date.now() < guest.feedback.visibleUntil;
@@ -306,44 +461,12 @@ export const Editor2D: React.FC = () => {
                 </button>
               </div>
             )}
-
-            {selectedTool === 'elevator' && (
-              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-[#0f1620]/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-[#1fa87c]/30 flex items-center gap-3.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">🛗</span>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-[#43c397] font-mono">Elevator Setup Choice</p>
-                    <p className="text-[9px] text-slate-400">Select active drive algorithm</p>
-                  </div>
-                </div>
-                <div className="h-6 w-px bg-[#1c2638]"></div>
-                <div className="flex bg-[#0a0e14] p-0.5 rounded-lg border border-[#1c2638]/80">
-                  <button
-                    onClick={() => setElevatorSystemMode('standard')}
-                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all cursor-pointer ${
-                      elevatorSystemMode === 'standard'
-                        ? 'bg-[#1fa87c] text-white shadow shadow-[#1fa87c]/30 font-black'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    Standard Mode
-                  </button>
-                  <button
-                    onClick={() => setElevatorSystemMode('dcs')}
-                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all cursor-pointer ${
-                      elevatorSystemMode === 'dcs'
-                        ? 'bg-[#1fa87c] text-white shadow shadow-[#1fa87c]/30 font-black'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    KONE Polaris DCS
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
+          {/* Architectural analytics and room capacity report overlay */}
+          <FloorInfoOverlay isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
         </div>
       </div>
+      <SnapshotModal isOpen={isSnapshotOpen} onClose={() => setIsSnapshotOpen(false)} />
     </div>
   );
 };

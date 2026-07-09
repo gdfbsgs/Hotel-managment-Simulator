@@ -1,4 +1,4 @@
-export type TileType = 'empty' | 'floor' | 'wall' | 'door' | 'window' | 'bed' | 'reception' | 'plant' | 'table' | 'elevator' | 'bathroom' | 'staff' | 'stairs';
+export type TileType = 'empty' | 'floor' | 'wall' | 'door' | 'window' | 'bed' | 'bed_single' | 'bed_double' | 'reception' | 'plant' | 'table' | 'elevator' | 'bathroom' | 'staff' | 'stairs';
 
 export interface Label {
   id: string;
@@ -11,6 +11,7 @@ export interface Floor {
   level: number;
   name?: string;
   grid: TileType[][];
+  rotations?: number[][];
   labels?: Label[];
 }
 
@@ -19,6 +20,7 @@ export interface FloorTemplate {
   name: string;
   description?: string;
   grid: TileType[][];
+  rotations?: number[][];
   labels?: Label[];
   isBuiltIn?: boolean;
 }

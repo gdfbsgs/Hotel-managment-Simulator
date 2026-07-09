@@ -60,12 +60,12 @@ Each cell in the grid represents a tile type. Use ONLY these exact characters:
 Important rules for layout:
 - If the user specifies a number of floors (e.g. "a 10 floor hotel", "3 floors"), generate exactly that number of floors (up to 10 floors). If they do not specify, default to generating 2 floors.
 - The ground floor (level 0) represents the Lobby, containing reception desk ('R'), some plants ('P'), seating tables ('T'), elevators ('E'), and stairs ('X'). It must have at least one main entrance door ('D') on the outer wall.
-- Upper floors (level 1 and above) MUST contain modular hotel suites and continuous hallways.
-- Each suite on upper floors MUST be enclosed by walls ('#'), and MUST contain:
-  1. Exactly one bed ('B')
-  2. Exactly one bathroom ('b')
-  3. Exactly one door ('D') built into the suite's wall that opens directly into the central hallway corridor ('.'). Do NOT omit doors!
-- Hallways/Corridors MUST be continuous pathways constructed of floor tiles ('.') that directly connect EVERY suite's entrance door ('D') to the elevators ('E') and stairs ('X').
+- Upper floors (level 1 and above) MUST contain modular hotel suites, staff/technical rooms, and continuous hallways.
+- ALL ENCLOSED ROOMS MUST HAVE A DOOR: Every single enclosed room or suite (whether it is a guest room with a bed 'B' and bathroom 'b', or a staff room with staff desks 'S') MUST be enclosed by walls ('#') and MUST have at least one door ('D') built into its enclosing wall. No room should be completely sealed off by walls.
+- DOOR LEADS TO VALID PATHWAY:
+  1. Every guest suite door ('D') MUST lead directly to a continuous public hallway corridor (composed of floor tiles '.'). Under no circumstances should a guest door open into a wall or another room.
+  2. Every staff/technical room door ('D') (enclosing staff/desks 'S') MUST lead directly to either a public hallway corridor ('.') or a staff-only pathway / staff path (represented by floor tiles '.' or staff tiles 'S'). Under no circumstances should a staff door open into a solid wall or be blocked.
+- Hallways/Corridors MUST be continuous pathways constructed of floor tiles ('.') that directly connect EVERY room's door ('D') to the elevators ('E') and stairs ('X'), ensuring guests and staff can always walk anywhere without getting stuck.
 - Outer boundaries MUST be closed with walls ('#'), but you MUST include multiple windows ('W') on the outer walls of both the lobby and the suites so guests can view the outside scenery.
 - CRITICAL Vertices Alignment: Elevators ('E') AND emergency stairs ('X') MUST align at the EXACT same (X, Y) coordinates across all floors of the hotel where they exist (e.g., elevators 'E' at row 15, cols 6-7, and stairs 'X' at row 19, cols 9-10) to make vertical travel work correctly.
 - Each floor's grid MUST contain exactly 20 rows (strings) and each string MUST be exactly 20 characters long. Any other size will break the application.

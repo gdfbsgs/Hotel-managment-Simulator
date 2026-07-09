@@ -11,141 +11,8 @@ const GRID_SIZE = 20;
 
 const createEmptyGrid = () => Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill('empty'));
 
-export const CHAIN_PRESETS: ChainPreset[] = [
-  {
-    id: 'c-marriott',
-    name: 'Marriott International',
-    description: 'A global hospitality leader offering select corporate comfort, natural design, and legendary world-class luxury.',
-    icon: '🏨',
-    brands: [
-      {
-        id: 'b-courtyard',
-        name: 'Courtyard by Marriott',
-        description: 'Modern, business-focused environment. High-efficiency beds and professional service with low overhead.',
-        vipMultiplier: 1.1,
-        bedMultiplier: 1.0,
-        styleColor: 'from-blue-600/20 to-blue-900/10 border-blue-500/30 text-blue-400',
-        vipSpawnRate: 0.12,
-        icon: '💼',
-        color: 'from-blue-500 to-indigo-500'
-      },
-      {
-        id: 'b-jwmarriott',
-        name: 'JW Marriott Resort',
-        description: 'Mindful luxury and nature-infused spaces. Plants and decorative tables gain double guest satisfaction!',
-        vipMultiplier: 1.4,
-        bedMultiplier: 1.2,
-        styleColor: 'from-emerald-600/20 to-emerald-900/10 border-emerald-500/30 text-emerald-400',
-        vipSpawnRate: 0.22,
-        icon: '🍃',
-        color: 'from-emerald-500 to-teal-500'
-      },
-      {
-        id: 'b-ritzcarlton',
-        name: 'The Ritz-Carlton',
-        description: 'The absolute gold standard in luxury. Double VIP spawn rate, high-end guest treatment, and supreme price margins.',
-        vipMultiplier: 2.0,
-        bedMultiplier: 1.8,
-        styleColor: 'from-amber-600/20 to-amber-900/10 border-amber-500/30 text-amber-400',
-        vipSpawnRate: 0.38,
-        icon: '👑',
-        color: 'from-amber-500 to-amber-700'
-      }
-    ]
-  },
-  {
-    id: 'c-radisson',
-    name: 'Radisson Hotel Group',
-    description: 'Sleek Scandinavian hospitality focusing on natural elements, balanced design, and high-density modern comfort.',
-    icon: '🛋️',
-    brands: [
-      {
-        id: 'b-radissonred',
-        name: 'Radisson RED',
-        description: 'Playful, tech-forward aesthetic. Vibrant layouts, creative capsule setups, and fast-track robotic services.',
-        vipMultiplier: 1.0,
-        bedMultiplier: 0.9,
-        styleColor: 'from-rose-600/20 to-rose-900/10 border-rose-500/30 text-rose-400',
-        vipSpawnRate: 0.10,
-        icon: '🎈',
-        color: 'from-rose-500 to-red-600'
-      },
-      {
-        id: 'b-radissonblu',
-        name: 'Radisson Blu',
-        description: 'Iconic, sophisticated Scandinavian design. Extremely high bed comfort and pristine premium services.',
-        vipMultiplier: 1.5,
-        bedMultiplier: 1.4,
-        styleColor: 'from-cyan-600/20 to-cyan-900/10 border-cyan-500/30 text-cyan-400',
-        vipSpawnRate: 0.20,
-        icon: '🛋️',
-        color: 'from-cyan-500 to-blue-600'
-      }
-    ]
-  },
-  {
-    id: 'c-cosmos',
-    name: 'Cosmos Hotel Group',
-    description: 'Immersive Russian hospitality, Soviet retro-futurism, cosmic architecture, and legendary space-age comfort.',
-    icon: '🚀',
-    brands: [
-      {
-        id: 'b-cosmos-smart',
-        name: 'Cosmos Smart Sputnik',
-        description: 'Soviet retro-futuristic aesthetic. Sputnik sphere accents, high efficiency, and super low building overheads.',
-        vipMultiplier: 0.9,
-        bedMultiplier: 0.9,
-        styleColor: 'from-violet-600/20 to-violet-900/10 border-violet-500/30 text-violet-400',
-        vipSpawnRate: 0.10,
-        icon: '🚀',
-        color: 'from-purple-500 to-violet-600'
-      },
-      {
-        id: 'b-cosmos-collection',
-        name: 'Cosmos Collection Palace',
-        description: 'Grand historic palaces. Russian imperial aesthetics, opulent gold trims, and stellar prestige ratings.',
-        vipMultiplier: 1.8,
-        bedMultiplier: 1.6,
-        styleColor: 'from-fuchsia-600/20 to-fuchsia-900/10 border-fuchsia-500/30 text-fuchsia-400',
-        vipSpawnRate: 0.30,
-        icon: '🏰',
-        color: 'from-fuchsia-500 to-pink-600'
-      }
-    ]
-  },
-  {
-    id: 'c-rixos',
-    name: 'Rixos Hotels & Resorts',
-    description: 'Lavish Turkish all-inclusive luxury, grand spa hammams, premium champagne events, and ultimate wellness sanctuaries.',
-    icon: '⚜️',
-    brands: [
-      {
-        id: 'b-rixospremium',
-        name: 'Rixos Premium',
-        description: 'Luxury seaside vibes. Premium Turkish hospitality, custom gold service, and high satisfaction ratings.',
-        vipMultiplier: 1.7,
-        bedMultiplier: 1.5,
-        styleColor: 'from-yellow-600/20 to-yellow-900/10 border-yellow-500/30 text-yellow-400',
-        vipSpawnRate: 0.28,
-        icon: '⚜️',
-        color: 'from-yellow-500 to-amber-600'
-      },
-      {
-        id: 'b-rixosroyal',
-        name: 'Rixos Royal Spa Retreat',
-        description: 'Ultimate wellness spa retreats. All-inclusive luxury, extreme VIP spawn multipliers, and maximum relaxation levels.',
-        vipMultiplier: 2.2,
-        bedMultiplier: 2.0,
-        styleColor: 'from-orange-600/20 to-orange-900/10 border-orange-500/30 text-orange-400',
-        vipSpawnRate: 0.45,
-        icon: '👑',
-        color: 'from-orange-500 to-yellow-500'
-      }
-    ]
-  }
-];
-
-export const DEFAULT_BRANDS: Brand[] = CHAIN_PRESETS.flatMap(c => c.brands);
+import { CHAIN_PRESETS, DEFAULT_BRANDS } from './brandsData';
+export { CHAIN_PRESETS, DEFAULT_BRANDS };
 
 const getInitialMilestones = (): Milestone[] => [
   { id: 'm-floors-2', title: 'Growing Upward', description: 'Reach 2 hotel floors.', targetType: 'floors', targetValue: 2, unlocked: false, rarity: 'bronze' },
@@ -172,7 +39,13 @@ const syncActiveHotelHelper = (state: any) => {
         bonusPrograms: state.bonusPrograms,
         activeBonusProgramId: state.activeBonusProgramId,
         totalGuestsServed: state.totalGuestsServed,
-        milestones: state.milestones
+        milestones: state.milestones,
+        wallColor: state.wallColor,
+        wallTexture: state.wallTexture,
+        doorColor: state.doorColor,
+        floorColor: state.floorColor,
+        floorTexture: state.floorTexture,
+        bedColor: state.bedColor,
       };
     }
     return h;
@@ -329,6 +202,9 @@ export const evaluateFloorRoomCategory = (floor: Floor, categories: RoomCategory
   floor.grid.forEach(row => row.forEach(tile => {
     if (tile !== 'empty') {
       tileCounts[tile] = (tileCounts[tile] || 0) + 1;
+      if (tile === 'bed_single' || tile === 'bed_double') {
+        tileCounts['bed'] = (tileCounts['bed'] || 0) + 1;
+      }
     }
   }));
 
@@ -404,7 +280,7 @@ interface HotelStore {
   activeFloorIndex: number;
   viewMode: ViewMode;
   appMode: AppMode;
-  selectedTool: TileType | 'eraser' | 'text';
+  selectedTool: TileType | 'eraser' | 'text' | 'select';
   roomRates: RoomRates;
   floorTemplates: FloorTemplate[];
   totalGuestsServed: number;
@@ -449,14 +325,14 @@ interface HotelStore {
   processGuests: () => void;
   serviceVipGuest: (guestId: string, staffId: string) => void;
 
-  setTile: (x: number, y: number, type: TileType | 'eraser') => void;
+  setTile: (x: number, y: number, type: TileType | 'eraser' | 'select' | 'text') => void;
   addLabel: (floorIndex: number, label: Label) => void;
   removeLabel: (floorIndex: number, id: string) => void;
   addFloor: () => void;
   setActiveFloor: (index: number) => void;
   setViewMode: (mode: ViewMode) => void;
   setAppMode: (mode: AppMode) => void;
-  setSelectedTool: (tool: TileType | 'eraser' | 'text') => void;
+  setSelectedTool: (tool: TileType | 'eraser' | 'text' | 'select') => void;
   loadPreset: (presetId: string) => void;
   resetAll: () => void;
 
@@ -498,6 +374,21 @@ interface HotelStore {
   loadSharedChainsList: () => Promise<void>;
   loadSharedChain: (ownerUid: string) => Promise<void>;
   stopSharing: () => void;
+
+  // Aesthetic theme state & actions
+  wallColor: string;
+  wallTexture: 'concrete' | 'brick' | 'wood' | 'plaster' | 'stone' | 'stripes';
+  doorColor: string;
+  floorColor: string;
+  floorTexture: 'terrazzo' | 'carpet' | 'parquet' | 'marble';
+  bedColor: string;
+  setWallColor: (color: string) => void;
+  setWallTexture: (texture: 'concrete' | 'brick' | 'wood' | 'plaster' | 'stone' | 'stripes') => void;
+  setDoorColor: (color: string) => void;
+  setFloorColor: (color: string) => void;
+  setFloorTexture: (texture: 'terrazzo' | 'carpet' | 'parquet' | 'marble') => void;
+  setBedColor: (color: string) => void;
+  rotateTile: (floorIndex: number, x: number, y: number, direction?: 'cw' | 'ccw') => void;
 }
 
 const checkToiletBedViolation = (floorGrid: string[][]): boolean => {
@@ -507,7 +398,7 @@ const checkToiletBedViolation = (floorGrid: string[][]): boolean => {
   
   floorGrid.forEach((row, y) => {
     row.forEach((cell, x) => {
-      if (cell === 'bed') bedPoints.push({ x, y });
+      if (cell === 'bed' || cell === 'bed_single' || cell === 'bed_double') bedPoints.push({ x, y });
       if (cell === 'bathroom') bathPoints.push({ x, y });
     });
   });
@@ -570,12 +461,20 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
   activeMilestoneNotification: null,
   dismissMilestoneNotification: () => set({ activeMilestoneNotification: null }),
 
+  // Aesthetic theme state defaults
+  wallColor: '#1e293b',
+  wallTexture: 'concrete',
+  doorColor: '#b45309',
+  floorColor: '#334155',
+  floorTexture: 'terrazzo',
+  bedColor: '#e11d48',
+
   openDoors: {},
   graphicsQuality: 'high',
   spectatorMode: false,
   isElevatorMoving: false,
   elevatorTargetFloor: null,
-  elevatorSystemMode: 'dcs',
+  elevatorSystemMode: 'standard',
 
   playerName: localStorage.getItem('archhotel_player_name') || '',
   onboardingCompleted: localStorage.getItem('archhotel_onboarding_completed') === 'true',
@@ -673,7 +572,13 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
       activeBonusProgramId: target.activeBonusProgramId || null,
       totalGuestsServed: target.totalGuestsServed,
       milestones: target.milestones,
-      activeFloorIndex: 0
+      activeFloorIndex: 0,
+      wallColor: (target as any).wallColor || '#1e293b',
+      wallTexture: (target as any).wallTexture || 'concrete',
+      doorColor: (target as any).doorColor || '#b45309',
+      floorColor: (target as any).floorColor || '#334155',
+      floorTexture: (target as any).floorTexture || 'terrazzo',
+      bedColor: (target as any).bedColor || '#e11d48',
     };
   }),
 
@@ -855,7 +760,13 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
             activeFloorIndex: 0,
             playerName: data.playerName || '',
             onboardingCompleted: data.onboardingCompleted ?? false,
-            hotelLocation: data.hotelLocation || { address: 'London, UK', lat: 51.5074, lng: -0.1278, sceneryTheme: 'city' }
+            hotelLocation: data.hotelLocation || { address: 'London, UK', lat: 51.5074, lng: -0.1278, sceneryTheme: 'city' },
+            wallColor: activeHotel.wallColor || '#1e293b',
+            wallTexture: activeHotel.wallTexture || 'concrete',
+            doorColor: activeHotel.doorColor || '#b45309',
+            floorColor: activeHotel.floorColor || '#334155',
+            floorTexture: activeHotel.floorTexture || 'terrazzo',
+            bedColor: activeHotel.bedColor || '#e11d48',
           });
         } else {
           const legacyHotel: HotelData = {
@@ -962,6 +873,8 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
       f.grid.forEach(row => {
         row.forEach(cell => {
           if (cell === 'bed') capacity += 2;
+          if (cell === 'bed_single') capacity += 1;
+          if (cell === 'bed_double') capacity += 2;
         });
       });
     });
@@ -1032,9 +945,12 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
     let extraMoney = 0;
     
     // Spawn new guests occasionally
-    let bedCount = 0;
-    state.floors.forEach(f => f.grid.forEach(r => r.forEach(c => { if (c === 'bed') bedCount++; })));
-    const capacity = bedCount * 2;
+    let capacity = 0;
+    state.floors.forEach(f => f.grid.forEach(r => r.forEach(c => {
+      if (c === 'bed') capacity += 2;
+      if (c === 'bed_single') capacity += 1;
+      if (c === 'bed_double') capacity += 2;
+    })));
 
     const activeBrand = [...DEFAULT_BRANDS, ...(state.customBrands || [])].find(b => b.id === state.activeHotelBrandId) || DEFAULT_BRANDS[0];
     
@@ -1405,7 +1321,9 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
               for (let y = 0; y < GRID_SIZE; y++) {
                 for (let x = 0; x < GRID_SIZE; x++) {
                   const isBedTaken = newGuests.some(og => og.id !== g.id && (og.targetX === x && og.targetY === y || og.finalTargetX === x && og.finalTargetY === y));
-                  if (state.floors[f].grid[y][x] === 'bed' && !isBedTaken) {
+                  const tile = state.floors[f].grid[y][x];
+                  const isBedTile = tile === 'bed' || tile === 'bed_single' || tile === 'bed_double';
+                  if (isBedTile && !isBedTaken) {
                     const bedX = x;
                     const bedY = y;
                     const bedFloor = f;
@@ -1648,7 +1566,7 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
           state.floors.forEach((floor, f) => {
             floor.grid.forEach((row, y) => {
               row.forEach((cell, x) => {
-                if (cell === 'bed' || cell === 'bathroom') {
+                if (cell === 'bed' || cell === 'bed_single' || cell === 'bed_double' || cell === 'bathroom') {
                   roomPoints.push({ x, y, f });
                 }
               });
@@ -1779,6 +1697,7 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
 
   setTile: (x, y, tool) => set((state) => {
     if ((tool as any) === 'text') return state;
+    if ((tool as any) === 'select') return state;
     
     let newFloors;
     if (tool === 'elevator') {
@@ -1818,20 +1737,26 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
   }),
 
   addFloor: () => set((state) => {
-    const prevGrid = state.floors[state.floors.length - 1]?.grid;
+    const groundGrid = state.floors[0]?.grid;
     const newGrid = createEmptyGrid();
     
-    if (prevGrid) {
-      for (let y = 0; y < prevGrid.length; y++) {
-        for (let x = 0; x < prevGrid[y].length; x++) {
-          if (prevGrid[y][x] === 'elevator') {
+    if (groundGrid) {
+      for (let y = 0; y < groundGrid.length; y++) {
+        for (let x = 0; x < groundGrid[y].length; x++) {
+          if (groundGrid[y][x] === 'elevator') {
             newGrid[y][x] = 'elevator';
           }
         }
       }
     }
 
-    const nextFloors = [...state.floors, { level: state.floors.length, name: `Level ${state.floors.length}`, grid: newGrid, labels: [] }];
+    const nextFloors = [...state.floors, { 
+      level: state.floors.length, 
+      name: `Level ${state.floors.length}`, 
+      grid: newGrid, 
+      rotations: Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0)),
+      labels: [] 
+    }];
     setTimeout(() => checkMilestones(useHotelStore.getState(), set), 0);
     const synced = syncActiveHotelHelper({ ...state, floors: nextFloors });
     return {
@@ -1845,6 +1770,62 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
   setViewMode: (mode) => set({ viewMode: mode }),
   setAppMode: (mode) => set({ appMode: mode }),
   setSelectedTool: (tool) => set({ selectedTool: tool }),
+
+  // Theme actions
+  setWallColor: (color) => set((state) => {
+    const nextState = { ...state, wallColor: color };
+    const synced = syncActiveHotelHelper(nextState);
+    return { wallColor: color, hotels: synced };
+  }),
+  setWallTexture: (texture) => set((state) => {
+    const nextState = { ...state, wallTexture: texture };
+    const synced = syncActiveHotelHelper(nextState);
+    return { wallTexture: texture, hotels: synced };
+  }),
+  setDoorColor: (color) => set((state) => {
+    const nextState = { ...state, doorColor: color };
+    const synced = syncActiveHotelHelper(nextState);
+    return { doorColor: color, hotels: synced };
+  }),
+  setFloorColor: (color) => set((state) => {
+    const nextState = { ...state, floorColor: color };
+    const synced = syncActiveHotelHelper(nextState);
+    return { floorColor: color, hotels: synced };
+  }),
+  setFloorTexture: (texture) => set((state) => {
+    const nextState = { ...state, floorTexture: texture };
+    const synced = syncActiveHotelHelper(nextState);
+    return { floorTexture: texture, hotels: synced };
+  }),
+  setBedColor: (color) => set((state) => {
+    const nextState = { ...state, bedColor: color };
+    const synced = syncActiveHotelHelper(nextState);
+    return { bedColor: color, hotels: synced };
+  }),
+  rotateTile: (floorIndex, x, y, direction = 'cw') => set((state) => {
+    const newFloors = [...state.floors];
+    const floor = newFloors[floorIndex];
+    if (!floor) return state;
+    
+    const newRotations = floor.rotations 
+      ? floor.rotations.map(row => [...row]) 
+      : Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
+      
+    const currentRotation = newRotations[y]?.[x] ?? 0;
+    let nextRotation;
+    if (direction === 'cw') {
+      nextRotation = (currentRotation + 90) % 360;
+    } else {
+      nextRotation = (currentRotation - 90 + 360) % 360;
+    }
+    
+    newRotations[y] = [...newRotations[y]];
+    newRotations[y][x] = nextRotation;
+    
+    newFloors[floorIndex] = { ...floor, rotations: newRotations };
+    const synced = syncActiveHotelHelper({ ...state, floors: newFloors });
+    return { floors: newFloors, hotels: synced };
+  }),
 
   toggleDoor: (floorIndex, x, y) => set((state) => {
     const key = `${floorIndex}-${x}-${y}`;
@@ -1946,10 +1927,37 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
 
     set((state) => {
       const newFloors = [...state.floors];
-      // Retain the floor's original level and level-name, but overwrite the grid & labels
+      const groundFloor = state.floors[0];
+      const groundGrid = groundFloor?.grid;
+      
+      let targetGrid = JSON.parse(JSON.stringify(template.grid));
+      
+      if (groundGrid && activeFloorIndex > 0) {
+        const groundElevatorCoords: { x: number; y: number }[] = [];
+        for (let y = 0; y < groundGrid.length; y++) {
+          for (let x = 0; x < groundGrid[y].length; x++) {
+            if (groundGrid[y][x] === 'elevator') {
+              groundElevatorCoords.push({ x, y });
+            }
+          }
+        }
+        
+        for (let y = 0; y < targetGrid.length; y++) {
+          for (let x = 0; x < targetGrid[y].length; x++) {
+            if (targetGrid[y][x] === 'elevator') {
+              targetGrid[y][x] = 'empty';
+            }
+          }
+        }
+        
+        groundElevatorCoords.forEach(({ x, y }) => {
+          targetGrid[y][x] = 'elevator';
+        });
+      }
+
       newFloors[activeFloorIndex] = {
         ...newFloors[activeFloorIndex],
-        grid: JSON.parse(JSON.stringify(template.grid)),
+        grid: targetGrid,
         labels: JSON.parse(JSON.stringify(template.labels || []))
       };
       const synced = syncActiveHotelHelper({ ...state, floors: newFloors });

@@ -138,39 +138,119 @@ const triggerEmergencyAlarm = () => {
 };
 
 // --- HIGH FIDELITY PROCEDURAL TEXTURE GENERATORS ---
-const createTerrazzoTexture = () => {
+const createTerrazzoTexture = (color = '#334155', textureType = 'terrazzo') => {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
   if (!ctx) return new THREE.CanvasTexture(canvas);
   
-  // Base off-white plaster
-  ctx.fillStyle = '#f8fafc';
+  // Base floor color
+  ctx.fillStyle = color;
   ctx.fillRect(0, 0, 512, 512);
   
-  // Tiled grid line overlay (luxury large terrazzo tiles)
-  ctx.strokeStyle = '#cbd5e1';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(0, 0, 512, 512);
-  
-  // Random elegant quartz and marble chips (amber, charcoal, warm gold, cool slate)
-  const colors = ['#f59e0b', '#d97706', '#64748b', '#334155', '#e2e8f0', '#cbd5e1', '#b45309'];
-  for (let i = 0; i < 300; i++) {
-    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
-    ctx.beginPath();
-    const x = Math.random() * 512;
-    const y = Math.random() * 512;
-    const r = 2 + Math.random() * 9;
-    const sides = 3 + Math.floor(Math.random() * 5);
-    for (let s = 0; s <= sides; s++) {
-      const angle = (s / sides) * Math.PI * 2;
-      const px = x + Math.cos(angle) * r;
-      const py = y + Math.sin(angle) * r;
-      if (s === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+  if (textureType === 'terrazzo') {
+    // Tiled grid line overlay (luxury large terrazzo tiles)
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(0, 0, 512, 512);
+    
+    // Chips
+    const chips = ['#f59e0b', '#cbd5e1', '#b45309', '#1e293b', '#e2e8f0', '#f43f5e', '#10b981'];
+    for (let i = 0; i < 300; i++) {
+      ctx.fillStyle = chips[Math.floor(Math.random() * chips.length)];
+      ctx.beginPath();
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const r = 2 + Math.random() * 9;
+      const sides = 3 + Math.floor(Math.random() * 5);
+      for (let s = 0; s <= sides; s++) {
+        const angle = (s / sides) * Math.PI * 2;
+        const px = x + Math.cos(angle) * r;
+        const py = y + Math.sin(angle) * r;
+        if (s === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.fill();
     }
-    ctx.fill();
+  } else if (textureType === 'carpet') {
+    // Cozy carpet grain
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    for (let i = 0; i < 3000; i++) {
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    for (let i = 0; i < 1500; i++) {
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5);
+    }
+  } else if (textureType === 'parquet') {
+    // Wooden Parquet
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 2;
+    const size = 64;
+    ctx.beginPath();
+    for (let y = 0; y < 512; y += size) {
+      for (let x = 0; x < 512; x += size) {
+        ctx.strokeRect(x, y, size, size);
+        // Draw wood grains inside each square block
+        const dir = ((x / size) + (y / size)) % 2 === 0; // Alternating direction
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x + 2, y + 2, size - 4, size - 4);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = 1.5;
+        if (dir) {
+          // Vertical grain
+          for (let gx = x + 4; gx < x + size; gx += 6) {
+            ctx.beginPath();
+            ctx.moveTo(gx, y);
+            ctx.lineTo(gx + (Math.random() - 0.5) * 4, y + size);
+            ctx.stroke();
+          }
+        } else {
+          // Horizontal grain
+          for (let gy = y + 4; gy < y + size; gy += 6) {
+            ctx.beginPath();
+            ctx.moveTo(x, gy);
+            ctx.lineTo(x + size, gy + (Math.random() - 0.5) * 4);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+    }
+  } else if (textureType === 'marble') {
+    // Elegant Marble veins
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      let sx = Math.random() * 512;
+      let sy = 0;
+      ctx.moveTo(sx, sy);
+      while (sy < 512) {
+        sx += (Math.random() - 0.5) * 40;
+        sy += 20 + Math.random() * 30;
+        ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+    }
+    // Minor darker veins
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      let sx = 0;
+      let sy = Math.random() * 512;
+      ctx.moveTo(sx, sy);
+      while (sx < 512) {
+        sx += 20 + Math.random() * 30;
+        sy += (Math.random() - 0.5) * 40;
+        ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+    }
   }
   
   const texture = new THREE.CanvasTexture(canvas);
@@ -209,36 +289,136 @@ const createWoodTexture = (baseColor = '#7c2d12', grainColor = '#451a03') => {
   return texture;
 };
 
-const createWallTexture = () => {
+const createWallTexture = (color = '#1e293b', textureType = 'concrete') => {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
   if (!ctx) return new THREE.CanvasTexture(canvas);
   
-  // Elegant dark slate concrete
-  ctx.fillStyle = '#1e293b';
+  // Base color
+  ctx.fillStyle = color;
   ctx.fillRect(0, 0, 512, 512);
   
-  // Fine concrete grain speckles
-  ctx.fillStyle = '#0f172a';
-  for (let i = 0; i < 400; i++) {
-    ctx.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5);
+  if (textureType === 'concrete') {
+    // Fine concrete grain speckles
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    for (let i = 0; i < 400; i++) {
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    for (let i = 0; i < 200; i++) {
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 2.5, 2.5);
+    }
+    // Grooves
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    for (let y = 0; y <= 512; y += 128) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(512, y);
+    }
+    ctx.stroke();
+  } else if (textureType === 'brick') {
+    // Draw brick pattern
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 3;
+    const rows = 16;
+    const cols = 8;
+    const rh = 512 / rows;
+    const cw = 512 / cols;
+    ctx.beginPath();
+    for (let i = 0; i <= rows; i++) {
+      ctx.moveTo(0, i * rh);
+      ctx.lineTo(512, i * rh);
+    }
+    for (let r = 0; r < rows; r++) {
+      const offset = (r % 2) * (cw / 2);
+      for (let c = 0; c <= cols + 1; c++) {
+        ctx.moveTo(c * cw - offset, r * rh);
+        ctx.lineTo(c * cw - offset, (r + 1) * rh);
+      }
+    }
+    ctx.stroke();
+    // Shadow overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    for (let i = 0; i < 150; i++) {
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 3, 3);
+    }
+  } else if (textureType === 'wood') {
+    // Wooden planks
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (let y = 0; y <= 512; y += 64) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(512, y);
+    }
+    ctx.stroke();
+    // Fine grain lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 2;
+    for (let y = 0; y < 512; y += 8) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      for (let x = 0; x < 512; x += 16) {
+        const offset = Math.sin(x * 0.03 + y * 0.05) * 2;
+        ctx.lineTo(x, y + offset);
+      }
+      ctx.stroke();
+    }
+  } else if (textureType === 'plaster') {
+    // Stucco Plaster
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    for (let i = 0; i < 2000; i++) {
+      ctx.beginPath();
+      ctx.arc(Math.random() * 512, Math.random() * 512, 1 + Math.random() * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    for (let i = 0; i < 1000; i++) {
+      ctx.beginPath();
+      ctx.arc(Math.random() * 512, Math.random() * 512, 1 + Math.random() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (textureType === 'stone') {
+    // Stacked Stone Wall
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 4;
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    for (let y = 0; y < 512; y += 48) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      for (let x = 0; x <= 512; x += 32) {
+        const rx = x + (Math.random() - 0.5) * 12;
+        const ry = y + (Math.random() - 0.5) * 8;
+        ctx.lineTo(rx, ry);
+      }
+      ctx.stroke();
+    }
+    for (let y = 0; y < 512; y += 48) {
+      for (let x = 24; x < 512; x += 64) {
+        const offset = (Math.random() - 0.5) * 16;
+        ctx.beginPath();
+        ctx.moveTo(x + offset, y);
+        ctx.lineTo(x + offset + (Math.random() - 0.5) * 10, y + 48);
+        ctx.stroke();
+      }
+    }
+  } else if (textureType === 'stripes') {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    for (let x = 0; x < 512; x += 32) {
+      ctx.fillRect(x, 0, 16, 512);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x < 512; x += 8) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, 512);
+    }
+    ctx.stroke();
   }
-  ctx.fillStyle = '#334155';
-  for (let i = 0; i < 200; i++) {
-    ctx.fillRect(Math.random() * 512, Math.random() * 512, 2.5, 2.5);
-  }
-  
-  // Horizontal grooves for paneled modular luxury architectural feel
-  ctx.strokeStyle = '#0f172a';
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  for (let y = 0; y <= 512; y += 128) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(512, y);
-  }
-  ctx.stroke();
   
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
@@ -310,22 +490,29 @@ const createBathroomTexture = () => {
 };
 
 // --- SINGLETON CACHED TEXTURE ACCESSORS FOR HIGH PERFORMANCE ---
-let cachedTerrazzo: THREE.CanvasTexture | null = null;
-let cachedWall: THREE.CanvasTexture | null = null;
+const terrazzoTextureMap = new Map<string, THREE.CanvasTexture>();
+const getTerrazzoTexture = (color = '#334155', texture = 'terrazzo') => {
+  const key = `${color}-${texture}`;
+  if (!terrazzoTextureMap.has(key)) {
+    terrazzoTextureMap.set(key, createTerrazzoTexture(color, texture));
+  }
+  return terrazzoTextureMap.get(key)!;
+};
+
+const wallTextureMap = new Map<string, THREE.CanvasTexture>();
+const getWallTexture = (color = '#1e293b', texture = 'concrete') => {
+  const key = `${color}-${texture}`;
+  if (!wallTextureMap.has(key)) {
+    wallTextureMap.set(key, createWallTexture(color, texture));
+  }
+  return wallTextureMap.get(key)!;
+};
+
 let cachedMahogany: THREE.CanvasTexture | null = null;
 let cachedWood: THREE.CanvasTexture | null = null;
 let cachedFabricSheets: THREE.CanvasTexture | null = null;
-let cachedFabricBlanket: THREE.CanvasTexture | null = null;
 let cachedBathroom: THREE.CanvasTexture | null = null;
 
-const getTerrazzoTexture = () => {
-  if (!cachedTerrazzo) cachedTerrazzo = createTerrazzoTexture();
-  return cachedTerrazzo;
-};
-const getWallTexture = () => {
-  if (!cachedWall) cachedWall = createWallTexture();
-  return cachedWall;
-};
 const getMahoganyTexture = () => {
   if (!cachedMahogany) cachedMahogany = createWoodTexture('#451a03', '#1c0a00');
   return cachedMahogany;
@@ -338,10 +525,15 @@ const getFabricSheetsTexture = () => {
   if (!cachedFabricSheets) cachedFabricSheets = createFabricTexture('#f8fafc');
   return cachedFabricSheets;
 };
-const getFabricBlanketTexture = () => {
-  if (!cachedFabricBlanket) cachedFabricBlanket = createFabricTexture('#e11d48'); // rich crimson velvet
-  return cachedFabricBlanket;
+
+const fabricBlanketMap = new Map<string, THREE.CanvasTexture>();
+const getFabricBlanketTexture = (color = '#e11d48') => {
+  if (!fabricBlanketMap.has(color)) {
+    fabricBlanketMap.set(color, createFabricTexture(color));
+  }
+  return fabricBlanketMap.get(color)!;
 };
+
 const getBathroomTexture = () => {
   if (!cachedBathroom) cachedBathroom = createBathroomTexture();
   return cachedBathroom;
@@ -417,6 +609,9 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
         isDragging.current = true;
         prevX.current = e.clientX;
         prevY.current = e.clientY;
+        try {
+          target.setPointerCapture(e.pointerId);
+        } catch (err) {}
       }
     };
 
@@ -436,12 +631,28 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
       if (e.pointerId === draggingPointerId.current) {
         isDragging.current = false;
         draggingPointerId.current = null;
+        try {
+          const target = e.target as HTMLElement;
+          target.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+      }
+    };
+
+    const handlePointerCancel = (e: PointerEvent) => {
+      if (e.pointerId === draggingPointerId.current) {
+        isDragging.current = false;
+        draggingPointerId.current = null;
+        try {
+          const target = e.target as HTMLElement;
+          target.releasePointerCapture(e.pointerId);
+        } catch (err) {}
       }
     };
 
     window.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerCancel);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
@@ -449,6 +660,7 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
       window.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerCancel);
     };
   }, [camera, activeFloorIndex]);
 
@@ -586,24 +798,25 @@ const FpsControls: React.FC<FpsControlsProps> = ({ joystickRef }) => {
   return null;
 };
 
-const getMergedBlocks = (grid: TileType[][], type: TileType) => {
+const getMergedBlocks = (grid: TileType[][], type: TileType, rotations?: number[][]) => {
   const height = grid.length;
   const width = grid[0].length;
   const visited = Array(height).fill(0).map(() => Array(width).fill(false));
-  const blocks: {x: number, y: number, w: number, h: number}[] = [];
+  const blocks: {x: number, y: number, w: number, h: number, rotation: number}[] = [];
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (grid[y][x] === type && !visited[y][x]) {
+        const rVal = rotations?.[y]?.[x] ?? 0;
         let w = 1;
-        while (x + w < width && grid[y][x + w] === type && !visited[y][x + w]) {
+        while (x + w < width && grid[y][x + w] === type && !visited[y][x + w] && (rotations?.[y]?.[x + w] ?? 0) === rVal) {
           w++;
         }
         let h = 1;
         let canExpand = true;
         while (y + h < height && canExpand) {
           for (let i = 0; i < w; i++) {
-            if (grid[y + h][x + i] !== type || visited[y + h][x + i]) {
+            if (grid[y + h][x + i] !== type || visited[y + h][x + i] || (rotations?.[y + h][x + i] ?? 0) !== rVal) {
               canExpand = false;
               break;
             }
@@ -615,15 +828,15 @@ const getMergedBlocks = (grid: TileType[][], type: TileType) => {
             visited[y + dy][x + dx] = true;
           }
         }
-        blocks.push({ x, y, w, h });
+        blocks.push({ x, y, w, h, rotation: rVal });
       }
     }
   }
   return blocks;
 };
 
-const MergedBed = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: number, grid: TileType[][] }) => {
-  const { graphicsQuality } = useHotelStore();
+const MergedBed = ({ x, y, w, h, grid, rotation = 0 }: { x: number, y: number, w: number, h: number, grid: TileType[][], rotation?: number }) => {
+  const { graphicsQuality, floorColor, floorTexture, bedColor } = useHotelStore();
   const roughnessVal = graphicsQuality === 'ultra' ? 0.15 : graphicsQuality === 'high' ? 0.35 : graphicsQuality === 'medium' ? 0.6 : 0.95;
 
   let touchesTop = false, touchesBottom = false, touchesLeft = false, touchesRight = false;
@@ -689,15 +902,15 @@ const MergedBed = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: n
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
 
   const fabricSheets = getFabricSheetsTexture();
-  const fabricBlanket = getFabricBlanketTexture();
+  const fabricBlanket = getFabricBlanketTexture(bedColor);
   const woodTexture = getWoodTexture();
 
   return (
-    <group position={[centerX, 0, centerZ]}>
+    <group position={[centerX, 0, centerZ]} rotation={[0, -rotation * Math.PI / 180, 0]}>
       {/* 1. TERRAZZO FLOOR SLAB UNDERNEATH - matches standard flooring tile */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial map={getTerrazzoTexture()} roughness={roughnessVal} />
+         <meshStandardMaterial map={getTerrazzoTexture(floorColor, floorTexture)} roughness={roughnessVal} />
       </mesh>
 
       {/* 2. REALISTIC WOOD BED FRAME */}
@@ -777,18 +990,18 @@ const MergedBed = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: n
   );
 };
 
-const MergedTable = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
-  const { graphicsQuality } = useHotelStore();
+const MergedTable = ({ x, y, w, h, rotation = 0 }: { x: number, y: number, w: number, h: number, rotation?: number }) => {
+  const { graphicsQuality, floorColor, floorTexture } = useHotelStore();
   const roughnessVal = graphicsQuality === 'ultra' ? 0.15 : graphicsQuality === 'high' ? 0.35 : graphicsQuality === 'medium' ? 0.6 : 0.95;
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
 
   return (
-    <group position={[centerX, 0, centerZ]}>
+    <group position={[centerX, 0, centerZ]} rotation={[0, -rotation * Math.PI / 180, 0]}>
       {/* TERRAZZO FLOOR SLAB UNDERNEATH */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial map={getTerrazzoTexture()} roughness={roughnessVal} />
+         <meshStandardMaterial map={getTerrazzoTexture(floorColor, floorTexture)} roughness={roughnessVal} />
       </mesh>
       {/* Wooden tabletop */}
       <mesh position={[0, 0.55 + FLOOR_HEIGHT, 0]}>
@@ -804,18 +1017,18 @@ const MergedTable = ({ x, y, w, h }: { x: number, y: number, w: number, h: numbe
   );
 };
 
-const MergedReception = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
-  const { graphicsQuality } = useHotelStore();
+const MergedReception = ({ x, y, w, h, rotation = 0 }: { x: number, y: number, w: number, h: number, rotation?: number }) => {
+  const { graphicsQuality, floorColor, floorTexture } = useHotelStore();
   const roughnessVal = graphicsQuality === 'ultra' ? 0.15 : graphicsQuality === 'high' ? 0.35 : graphicsQuality === 'medium' ? 0.6 : 0.95;
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
 
   return (
-    <group position={[centerX, 0, centerZ]}>
+    <group position={[centerX, 0, centerZ]} rotation={[0, -rotation * Math.PI / 180, 0]}>
       {/* Terrazzo desk base slab */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial map={getTerrazzoTexture()} roughness={roughnessVal} />
+         <meshStandardMaterial map={getTerrazzoTexture(floorColor, floorTexture)} roughness={roughnessVal} />
       </mesh>
       {/* Mahogany Front Desk Counter */}
       <mesh position={[0, 0.55 + FLOOR_HEIGHT, 0]}>
@@ -831,8 +1044,8 @@ const MergedReception = ({ x, y, w, h }: { x: number, y: number, w: number, h: n
   );
 };
 
-const MergedWindow = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: number, grid: TileType[][] }) => {
-  const { graphicsQuality } = useHotelStore();
+const MergedWindow = ({ x, y, w, h, grid, rotation = 0 }: { x: number, y: number, w: number, h: number, grid: TileType[][], rotation?: number }) => {
+  const { graphicsQuality, floorColor, floorTexture } = useHotelStore();
   const roughnessVal = graphicsQuality === 'ultra' ? 0.15 : graphicsQuality === 'high' ? 0.35 : graphicsQuality === 'medium' ? 0.6 : 0.95;
 
   let windowRotation = 0;
@@ -851,11 +1064,11 @@ const MergedWindow = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h
   const windowHeight = WALL_HEIGHT * 0.65;
 
   return (
-    <group position={[centerX, 0, centerZ]}>
+    <group position={[centerX, 0, centerZ]} rotation={[0, -rotation * Math.PI / 180, 0]}>
       {/* TERRAZZO FLOOR SLAB UNDERNEATH */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial map={getTerrazzoTexture()} roughness={roughnessVal} />
+         <meshStandardMaterial map={getTerrazzoTexture(floorColor, floorTexture)} roughness={roughnessVal} />
       </mesh>
       {/* Window glass pane */}
       <mesh position={[0, WALL_HEIGHT / 2, 0]} rotation={[0, windowRotation, 0]}>
@@ -866,8 +1079,8 @@ const MergedWindow = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h
   );
 };
 
-const MergedDoor = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: number, grid: TileType[][] }) => {
-  const { activeFloorIndex, openDoors, toggleDoor } = useHotelStore();
+const MergedDoor = ({ x, y, w, h, grid, rotation = 0 }: { x: number, y: number, w: number, h: number, grid: TileType[][], rotation?: number }) => {
+  const { activeFloorIndex, openDoors, toggleDoor, doorColor, floorColor, floorTexture } = useHotelStore();
   const [hovered, setHovered] = useState(false);
   const hingeRef = useRef<THREE.Group>(null);
   
@@ -904,11 +1117,11 @@ const MergedDoor = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: 
   }, [hovered]);
 
   return (
-    <group position={[centerX, 0, centerZ]}>
+    <group position={[centerX, 0, centerZ]} rotation={[0, -rotation * Math.PI / 180, 0]}>
       {/* Floor Slab matching the floor tiles */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial map={getTerrazzoTexture()} roughness={0.4} />
+         <meshStandardMaterial map={getTerrazzoTexture(floorColor, floorTexture)} roughness={0.4} />
       </mesh>
       
       {/* Overhead metallic transom */}
@@ -935,7 +1148,7 @@ const MergedDoor = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: 
           >
             <boxGeometry args={[doorLength, doorHeight, TILE_SIZE * 0.16]} />
             <meshStandardMaterial 
-              map={getMahoganyTexture()} 
+              color={doorColor || "#b45309"} 
               roughness={0.6}
               emissive={hovered ? "#eab308" : "#000000"}
               emissiveIntensity={hovered ? 0.25 : 0}
@@ -952,11 +1165,11 @@ const MergedDoor = ({ x, y, w, h, grid }: { x: number, y: number, w: number, h: 
   );
 };
 
-const MergedBathroom = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+const MergedBathroom = ({ x, y, w, h, rotation = 0 }: { x: number, y: number, w: number, h: number, rotation?: number }) => {
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
   return (
-    <group position={[centerX, 0, centerZ]}>
+    <group position={[centerX, 0, centerZ]} rotation={[0, -rotation * Math.PI / 180, 0]}>
       {/* Beautiful Aqua Mosaic tiles */}
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
@@ -971,14 +1184,15 @@ const MergedBathroom = ({ x, y, w, h }: { x: number, y: number, w: number, h: nu
   );
 };
 
-const MergedStaff = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+const MergedStaff = ({ x, y, w, h, rotation = 0 }: { x: number, y: number, w: number, h: number, rotation?: number }) => {
+  const { floorColor, floorTexture } = useHotelStore();
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
   return (
-    <group position={[centerX, 0, centerZ]}>
+    <group position={[centerX, 0, centerZ]} rotation={[0, -rotation * Math.PI / 180, 0]}>
       <mesh position={[0, FLOOR_HEIGHT / 2, 0]}>
          <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-         <meshStandardMaterial map={getTerrazzoTexture()} roughness={0.5} />
+         <meshStandardMaterial map={getTerrazzoTexture(floorColor, floorTexture)} roughness={0.5} />
       </mesh>
       <mesh position={[0, 0.5 + FLOOR_HEIGHT, 0]}>
          <boxGeometry args={[w * TILE_SIZE * 0.7, 0.1, h * TILE_SIZE * 0.3]} />
@@ -1155,23 +1369,25 @@ const MergedElevator = ({ x, y, w, h, floorLevel, floorIndex }: { x: number, y: 
 };
 
 const MergedWall = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+  const { wallColor, wallTexture } = useHotelStore();
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
   return (
     <mesh position={[centerX, WALL_HEIGHT / 2, centerZ]} castShadow receiveShadow>
       <boxGeometry args={[w * TILE_SIZE, WALL_HEIGHT, h * TILE_SIZE]} />
-      <meshStandardMaterial map={getWallTexture()} roughness={0.5} />
+      <meshStandardMaterial map={getWallTexture(wallColor, wallTexture)} roughness={0.5} />
     </mesh>
   );
 };
 
 const MergedFloor = ({ x, y, w, h }: { x: number, y: number, w: number, h: number }) => {
+  const { floorColor, floorTexture } = useHotelStore();
   const centerX = x * TILE_SIZE + (w * TILE_SIZE) / 2;
   const centerZ = y * TILE_SIZE + (h * TILE_SIZE) / 2;
   return (
     <mesh position={[centerX, FLOOR_HEIGHT / 2, centerZ]} receiveShadow>
       <boxGeometry args={[w * TILE_SIZE, FLOOR_HEIGHT, h * TILE_SIZE]} />
-      <meshStandardMaterial map={getTerrazzoTexture()} roughness={0.4} />
+      <meshStandardMaterial map={getTerrazzoTexture(floorColor, floorTexture)} roughness={0.4} />
     </mesh>
   );
 };
@@ -1281,338 +1497,46 @@ const TileModel = ({ type, position }: { type: TileType; position: [number, numb
   }
 };
 
-// Theme-specific scene configuration: sky, lighting, fog, and ground colors.
-type SceneryTheme = 'city' | 'beach' | 'mountain' | 'forest' | 'desert';
-
-const SCENERY_THEMES: Record<SceneryTheme, {
-  sky: { sunPosition: [number, number, number]; turbidity: number; rayleigh: number };
-  ambient: { intensity: number; color: string };
-  directional: { intensity: number; color: string };
-  fog: { color: string; near: number; far: number };
-  ground: string;
-}> = {
-  city: {
-    sky: { sunPosition: [100, 30, 100], turbidity: 0.1, rayleigh: 0.5 },
-    ambient: { intensity: 0.45, color: '#cbd5e1' },
-    directional: { intensity: 1.4, color: '#fffbeb' },
-    fog: { color: '#1e293b', near: 60, far: 180 },
-    ground: '#1e293b',
-  },
-  beach: {
-    sky: { sunPosition: [80, 18, 60], turbidity: 1.5, rayleigh: 1.2 },
-    ambient: { intensity: 0.6, color: '#fef3c7' },
-    directional: { intensity: 1.6, color: '#fde68a' },
-    fog: { color: '#bae6fd', near: 70, far: 220 },
-    ground: '#fcd34d',
-  },
-  mountain: {
-    sky: { sunPosition: [120, 25, 80], turbidity: 0.5, rayleigh: 0.8 },
-    ambient: { intensity: 0.5, color: '#e0f2fe' },
-    directional: { intensity: 1.5, color: '#ffffff' },
-    fog: { color: '#cbd5e1', near: 80, far: 240 },
-    ground: '#334155',
-  },
-  forest: {
-    sky: { sunPosition: [60, 22, 40], turbidity: 0.8, rayleigh: 1.0 },
-    ambient: { intensity: 0.4, color: '#dcfce7' },
-    directional: { intensity: 1.2, color: '#ecfccb' },
-    fog: { color: '#14532d', near: 50, far: 160 },
-    ground: '#166534',
-  },
-  desert: {
-    sky: { sunPosition: [100, 8, 10], turbidity: 2.5, rayleigh: 2.0 },
-    ambient: { intensity: 0.5, color: '#ffedd5' },
-    directional: { intensity: 1.7, color: '#f97316' },
-    fog: { color: '#fbbf24', near: 80, far: 240 },
-    ground: '#d97706',
-  },
-};
-
-// Animated ocean surface with gentle vertex wave displacement.
-const AnimatedOcean: React.FC = () => {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const geomRef = useRef<THREE.PlaneGeometry>(null);
-
-  useFrame((state) => {
-    if (!geomRef.current) return;
-    const t = state.clock.elapsedTime;
-    const pos = geomRef.current.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const y = pos.getY(i);
-      const wave = Math.sin(x * 0.08 + t * 0.8) * 0.35 + Math.cos(y * 0.06 + t * 0.6) * 0.25;
-      pos.setZ(i, wave);
-    }
-    pos.needsUpdate = true;
-    geomRef.current.computeVertexNormals();
-  });
-
-  return (
-    <mesh ref={meshRef} position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <planeGeometry ref={geomRef as any} args={[500, 500, 48, 48]} />
-      <meshStandardMaterial color="#0ea5e9" transparent opacity={0.78} roughness={0.08} metalness={0.3} />
-    </mesh>
-  );
-};
-
-// Drifting volumetric cloud puffs that slowly translate across the sky.
-const CloudLayer: React.FC<{ count?: number; color?: string; height?: number }> = ({ count = 14, color = '#f8fafc', height = 38 }) => {
-  const groupRef = useRef<THREE.Group>(null);
-  const clouds = React.useMemo(() => {
-    const items = [];
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.3;
-      const distance = 50 + Math.random() * 60;
-      items.push({
-        x: Math.cos(angle) * distance,
-        z: Math.sin(angle) * distance,
-        scale: 3 + Math.random() * 5,
-        speed: 0.3 + Math.random() * 0.5,
-        offset: Math.random() * Math.PI * 2,
-      });
-    }
-    return items;
-  }, [count]);
-
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    const t = state.clock.elapsedTime;
-    groupRef.current.children.forEach((child, i) => {
-      const c = clouds[i];
-      child.position.x = c.x + Math.sin(t * c.speed * 0.1 + c.offset) * 8;
-      child.position.z = c.z + Math.cos(t * c.speed * 0.08 + c.offset) * 6;
-    });
-  });
-
-  return (
-    <group ref={groupRef}>
-      {clouds.map((c, i) => (
-        <group key={i} position={[c.x, height, c.z]} scale={[c.scale, c.scale * 0.5, c.scale]}>
-          <mesh>
-            <sphereGeometry args={[1, 10, 8]} />
-            <meshStandardMaterial color={color} transparent opacity={0.55} roughness={1} />
-          </mesh>
-          <mesh position={[0.7, 0.1, 0.2]} scale={[0.8, 0.7, 0.8]}>
-            <sphereGeometry args={[1, 10, 8]} />
-            <meshStandardMaterial color={color} transparent opacity={0.5} roughness={1} />
-          </mesh>
-          <mesh position={[-0.6, 0, -0.1]} scale={[0.7, 0.6, 0.7]}>
-            <sphereGeometry args={[1, 10, 8]} />
-            <meshStandardMaterial color={color} transparent opacity={0.5} roughness={1} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-};
-
-// A single detailed palm tree with curved trunk and fronds.
-const PalmTree: React.FC<{ x: number; z: number; scale: number }> = ({ x, z, scale }) => {
-  const fronds = React.useMemo(() => {
-    const items = [];
-    const count = 7;
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2;
-      items.push({ angle, len: 1.6 + Math.random() * 0.4 });
-    }
-    return items;
-  }, []);
-
-  return (
-    <group position={[x, 0, z]} scale={[scale, scale, scale]}>
-      {/* Curved trunk segments */}
-      <mesh position={[0, 1.2, 0]} rotation={[0, 0, 0.05]}>
-        <cylinderGeometry args={[0.13, 0.22, 2.4, 8]} />
-        <meshStandardMaterial color="#92400e" roughness={0.9} />
-      </mesh>
-      <mesh position={[0.12, 2.5, 0]} rotation={[0, 0, 0.18]}>
-        <cylinderGeometry args={[0.1, 0.14, 1.8, 8]} />
-        <meshStandardMaterial color="#78350f" roughness={0.9} />
-      </mesh>
-      {/* Fronds */}
-      <group position={[0.25, 3.4, 0]}>
-        {fronds.map((f, i) => (
-          <mesh key={i} rotation={[0.5, f.angle, 0]} position={[Math.cos(f.angle) * 0.1, 0, Math.sin(f.angle) * 0.1]}>
-            <coneGeometry args={[0.35, f.len, 5]} />
-            <meshStandardMaterial color="#15803d" roughness={0.7} side={THREE.DoubleSide} />
-          </mesh>
-        ))}
-        {/* Coconuts */}
-        <mesh position={[0, -0.15, 0.15]}>
-          <sphereGeometry args={[0.12, 8, 8]} />
-          <meshStandardMaterial color="#78350f" roughness={0.8} />
-        </mesh>
-      </group>
-    </group>
-  );
-};
-
-// A layered pine tree with multiple cone tiers.
-const PineTree: React.FC<{ x: number; z: number; scale: number; snowy?: boolean }> = ({ x, z, scale, snowy }) => {
-  return (
-    <group position={[x, 0, z]} scale={[scale, scale, scale]}>
-      <mesh position={[0, 0.8, 0]}>
-        <cylinderGeometry args={[0.1, 0.16, 1.6, 6]} />
-        <meshStandardMaterial color={snowy ? '#475569' : '#451a03'} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 1.7, 0]}>
-        <coneGeometry args={[0.75, 1.5, 7]} />
-        <meshStandardMaterial color={snowy ? '#0f766e' : '#065f46'} flatShading roughness={0.8} />
-      </mesh>
-      <mesh position={[0, 2.4, 0]}>
-        <coneGeometry args={[0.55, 1.2, 7]} />
-        <meshStandardMaterial color={snowy ? '#0d9488' : '#047857'} flatShading roughness={0.8} />
-      </mesh>
-      <mesh position={[0, 3.0, 0]}>
-        <coneGeometry args={[0.38, 0.9, 7]} />
-        <meshStandardMaterial color={snowy ? '#14b8a6' : '#059669'} flatShading roughness={0.8} />
-      </mesh>
-      {snowy && (
-        <mesh position={[0, 1.95, 0]}>
-          <coneGeometry args={[0.76, 0.4, 7]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.6} />
-        </mesh>
-      )}
-    </group>
-  );
-};
-
-// A rounded deciduous tree with a fuller canopy.
-const RoundTree: React.FC<{ x: number; z: number; scale: number; height: number }> = ({ x, z, scale, height }) => {
-  return (
-    <group position={[x, 0, z]} scale={[scale, scale, scale]}>
-      <mesh position={[0, height / 2, 0]}>
-        <cylinderGeometry args={[0.15, 0.24, height, 8]} />
-        <meshStandardMaterial color="#451a03" roughness={0.9} />
-      </mesh>
-      <mesh position={[0, height + 0.5, 0]}>
-        <sphereGeometry args={[1.2, 10, 10]} />
-        <meshStandardMaterial color="#166534" roughness={0.85} flatShading />
-      </mesh>
-      <mesh position={[0.5, height + 1.0, -0.2]} scale={[0.8, 0.8, 0.8]}>
-        <sphereGeometry args={[1.0, 10, 10]} />
-        <meshStandardMaterial color="#15803d" roughness={0.85} flatShading />
-      </mesh>
-      <mesh position={[-0.4, height + 0.8, 0.3]} scale={[0.7, 0.7, 0.7]}>
-        <sphereGeometry args={[0.9, 10, 10]} />
-        <meshStandardMaterial color="#14532d" roughness={0.85} flatShading />
-      </mesh>
-    </group>
-  );
-};
-
-// A saguaro cactus with arms.
-const Cactus: React.FC<{ x: number; z: number; scale: number }> = ({ x, z, scale }) => {
-  return (
-    <group position={[x, 0, z]} scale={[scale, scale, scale]}>
-      <mesh position={[0, 1.5, 0]}>
-        <cylinderGeometry args={[0.2, 0.24, 3, 8]} />
-        <meshStandardMaterial color="#15803d" roughness={0.9} />
-      </mesh>
-      <group position={[0, 1.8, 0]}>
-        <mesh position={[0.45, 0.4, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.13, 0.15, 0.9, 8]} />
-          <meshStandardMaterial color="#16a34a" roughness={0.9} />
-        </mesh>
-        <mesh position={[0.85, 0.9, 0]}>
-          <cylinderGeometry args={[0.13, 0.14, 1.2, 8]} />
-          <meshStandardMaterial color="#16a34a" roughness={0.9} />
-        </mesh>
-      </group>
-      <group position={[0, 1.2, 0]} rotation={[0, Math.PI, 0]}>
-        <mesh position={[0.4, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.12, 0.14, 0.8, 8]} />
-          <meshStandardMaterial color="#16a34a" roughness={0.9} />
-        </mesh>
-        <mesh position={[0.75, 1.0, 0]}>
-          <cylinderGeometry args={[0.12, 0.13, 1.0, 8]} />
-          <meshStandardMaterial color="#16a34a" roughness={0.9} />
-        </mesh>
-      </group>
-    </group>
-  );
-};
-
-// A skyscraper with emissive window grid texture for the city skyline.
-const CityBuilding: React.FC<{ x: number; z: number; width: number; height: number; depth: number; color: string }> = ({ x, z, width, height, depth, color }) => {
-  const windowTexture = React.useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return new THREE.CanvasTexture(canvas);
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, 64, 256);
-    // Window grid
-    for (let row = 0; row < 20; row++) {
-      for (let col = 0; col < 4; col++) {
-        const lit = Math.random() > 0.4;
-        ctx.fillStyle = lit ? '#fde68a' : '#0f172a';
-        ctx.fillRect(col * 16 + 3, row * 12 + 3, 10, 7);
-      }
-    }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    return tex;
-  }, [color]);
-
-  return (
-    <group position={[x, 0, z]}>
-      {/* Main tower */}
-      <mesh position={[0, height / 2 - 0.1, 0]} castShadow>
-        <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial map={windowTexture} roughness={0.4} metalness={0.3} emissive="#fbbf24" emissiveIntensity={0.08} />
-      </mesh>
-      {/* Rooftop antenna for taller buildings */}
-      {height > 30 && (
-        <mesh position={[0, height + 1.5, 0]}>
-          <cylinderGeometry args={[0.05, 0.08, 3, 6]} />
-          <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
-        </mesh>
-      )}
-    </group>
-  );
-};
-
-const EnvironmentScenery: React.FC<{ sceneryTheme?: SceneryTheme }> = ({ sceneryTheme = 'city' }) => {
+const EnvironmentScenery: React.FC<{ sceneryTheme?: 'city' | 'beach' | 'mountain' | 'forest' | 'desert' }> = ({ sceneryTheme = 'city' }) => {
+  // We can render random scenic elements scattered around the hotel
+  // Let's seed random coords so they remain static on re-renders
   const cityBuildings = React.useMemo(() => {
     const buildings = [];
-    for (let i = 0; i < 40; i++) {
-      const angle = (i / 40) * Math.PI * 2 + (Math.random() - 0.5) * 0.1;
-      const distance = 45 + Math.random() * 45;
+    for (let i = 0; i < 35; i++) {
+      const angle = (i / 35) * Math.PI * 2 + (Math.random() - 0.5) * 0.1;
+      const distance = 45 + Math.random() * 40;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
-      const width = 4 + Math.random() * 7;
-      const height = 15 + Math.random() * 40;
-      const depth = 4 + Math.random() * 7;
-      const hue = Math.random() * 25 + 200;
-      buildings.push({ x, z, width, height, depth, color: `hsl(${hue}, 18%, 28%)` });
+      const width = 5 + Math.random() * 7;
+      const height = 18 + Math.random() * 38;
+      const depth = 5 + Math.random() * 7;
+      const hue = Math.random() * 30 + 200; // Blueish skyscraper lights
+      buildings.push({ x, z, width, height, depth, color: `hsl(${hue}, 20%, 30%)` });
     }
     return buildings;
   }, []);
 
   const palms = React.useMemo(() => {
     const items = [];
-    for (let i = 0; i < 28; i++) {
-      const angle = (i / 28) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
-      const distance = 24 + Math.random() * 18;
+    for (let i = 0; i < 25; i++) {
+      const angle = (i / 25) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+      const distance = 25 + Math.random() * 15;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
-      items.push({ x, z, scale: 0.6 + Math.random() * 0.7 });
+      items.push({ x, z, scale: 0.6 + Math.random() * 0.8 });
     }
     return items;
   }, []);
 
   const mountains = React.useMemo(() => {
     const items = [];
-    for (let i = 0; i < 14; i++) {
-      const angle = (i / 14) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
-      const distance = 60 + Math.random() * 35;
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+      const distance = 60 + Math.random() * 30;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
-      const height = 28 + Math.random() * 28;
-      const radius = 13 + Math.random() * 12;
+      const height = 25 + Math.random() * 25;
+      const radius = 12 + Math.random() * 10;
       items.push({ x, z, height, radius });
     }
     return items;
@@ -1620,9 +1544,9 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: SceneryTheme }> = ({ scenery
 
   const forestTrees = React.useMemo(() => {
     const items = [];
-    for (let i = 0; i < 70; i++) {
-      const angle = (i / 70) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-      const distance = 22 + Math.random() * 38;
+    for (let i = 0; i < 60; i++) {
+      const angle = (i / 60) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+      const distance = 24 + Math.random() * 35;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
       items.push({ x, z, height: 2 + Math.random() * 3, scale: 0.7 + Math.random() * 0.6 });
@@ -1632,12 +1556,164 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: SceneryTheme }> = ({ scenery
 
   const desertDunes = React.useMemo(() => {
     const items = [];
-    for (let i = 0; i < 18; i++) {
-      const angle = (i / 18) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-      const distance = 28 + Math.random() * 38;
+    for (let i = 0; i < 15; i++) {
+      const angle = (i / 15) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const distance = 30 + Math.random() * 35;
       const x = Math.cos(angle) * distance;
       const z = Math.sin(angle) * distance;
-      items.push({ x, z, rx: 16 + Math.random() * 16, rz: 9 + Math.random() * 9, h: 2 + Math.random() * 2.5 });
+      items.push({ x, z, rx: 15 + Math.random() * 15, rz: 8 + Math.random() * 8, h: 2 + Math.random() * 2 });
+    }
+    return items;
+  }, []);
+
+  // NEW: Memoized scenic components for Beach theme
+  const beachLoungers = React.useMemo(() => {
+    const items = [];
+    const colors = ['#f43f5e', '#0ea5e9', '#eab308', '#10b981', '#a855f7'];
+    for (let i = 0; i < 12; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 22 + Math.random() * 10;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({
+        x,
+        z,
+        rotY: Math.random() * Math.PI * 2,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      });
+    }
+    return items;
+  }, []);
+
+  const beachIslands = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2 + Math.random() * 0.4;
+      const distance = 100 + Math.random() * 50;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({
+        x,
+        z,
+        radius: 12 + Math.random() * 14,
+        height: 5 + Math.random() * 5
+      });
+    }
+    return items;
+  }, []);
+
+  // NEW: Memoized clouds for Mountain theme
+  const mountainClouds = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
+      const distance = 40 + Math.random() * 30;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({
+        x,
+        z,
+        y: 16 + Math.random() * 8,
+        scale: 2 + Math.random() * 2
+      });
+    }
+    return items;
+  }, []);
+
+  const mountainRocks = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 16; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 16 + Math.random() * 15;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({
+        x,
+        z,
+        scale: 0.3 + Math.random() * 0.7,
+        rotY: Math.random() * Math.PI * 2
+      });
+    }
+    return items;
+  }, []);
+
+  // NEW: Memoized forest floor details (mushrooms and logs)
+  const forestMushrooms = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 30; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 15 + Math.random() * 15;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({
+        x,
+        z,
+        scale: 0.15 + Math.random() * 0.15
+      });
+    }
+    return items;
+  }, []);
+
+  const forestLogs = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 16 + Math.random() * 12;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({
+        x,
+        z,
+        rotY: Math.random() * Math.PI,
+        scale: 0.7 + Math.random() * 0.5
+      });
+    }
+    return items;
+  }, []);
+
+  // NEW: Memoized desert details
+  const desertMesas = React.useMemo(() => {
+    const items = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 + Math.random() * 0.4;
+      const distance = 65 + Math.random() * 25;
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      items.push({
+        x,
+        z,
+        w: 14 + Math.random() * 10,
+        h: 12 + Math.random() * 12,
+        d: 10 + Math.random() * 8
+      });
+    }
+    return items;
+  }, []);
+
+  // NEW: Memoized city elements (roads and cars)
+  const cityRoads = React.useMemo(() => {
+    const items = [];
+    items.push({ x: 0, z: 28, w: 220, d: 4 });
+    items.push({ x: 0, z: -28, w: 220, d: 4 });
+    items.push({ x: 28, z: 0, w: 4, d: 220 });
+    items.push({ x: -28, z: 0, w: 4, d: 220 });
+    return items;
+  }, []);
+
+  const cityCars = React.useMemo(() => {
+    const items = [];
+    const colors = ['#f43f5e', '#3b82f6', '#fbbf24', '#10b981', '#f8fafc', '#334155'];
+    for (let i = 0; i < 16; i++) {
+      const onVertical = Math.random() > 0.5;
+      const d = onVertical ? 28 : (Math.random() > 0.5 ? 28 : -28);
+      const along = (Math.random() - 0.5) * 110;
+      items.push({
+        x: onVertical ? (Math.random() > 0.5 ? 28 : -28) : along,
+        z: onVertical ? along : (Math.random() > 0.5 ? 28 : -28),
+        rotY: onVertical ? 0 : Math.PI / 2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        scale: 0.8 + Math.random() * 0.3
+      });
     }
     return items;
   }, []);
@@ -1645,15 +1721,69 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: SceneryTheme }> = ({ scenery
   if (sceneryTheme === 'beach') {
     return (
       <group>
-        <AnimatedOcean />
-        <CloudLayer count={12} color="#ffffff" height={32} />
-        {/* Sandy beach ring around the hotel */}
-        <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[20, 26, 48]} />
-          <meshStandardMaterial color="#fcd34d" roughness={1} side={THREE.DoubleSide} />
+        {/* Ocean plane overlay */}
+        <mesh position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[500, 500]} />
+          <meshStandardMaterial color="#0284c7" opacity={0.65} transparent roughness={0.1} />
         </mesh>
+        
+        {/* Distant islands on the horizon */}
+        {beachIslands.map((is, idx) => (
+          <group key={`is-${idx}`} position={[is.x, -1, is.z]}>
+            <mesh position={[0, is.height / 2, 0]}>
+              <coneGeometry args={[is.radius, is.height, 5]} />
+              <meshStandardMaterial color="#b5a285" roughness={0.9} flatShading />
+            </mesh>
+            <mesh position={[0, is.height * 0.9, 0]}>
+              <coneGeometry args={[is.radius * 0.8, is.height * 0.4, 5]} />
+              <meshStandardMaterial color="#15803d" roughness={0.8} />
+            </mesh>
+          </group>
+        ))}
+
+        {/* Sand transition ring */}
+        <mesh position={[0, -0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[16, 45, 32]} />
+          <meshStandardMaterial color="#fef08a" roughness={0.9} />
+        </mesh>
+
+        {/* Loungers and umbrellas */}
+        {beachLoungers.map((bl, idx) => (
+          <group key={`bl-${idx}`} position={[bl.x, 0, bl.z]} rotation={[0, bl.rotY, 0]}>
+            {/* Lounger Chair */}
+            <mesh position={[0, 0.08, 0]}>
+              <boxGeometry args={[1.4, 0.1, 0.6]} />
+              <meshStandardMaterial color={bl.color} roughness={0.8} />
+            </mesh>
+            {/* Umbrella Pole */}
+            <mesh position={[0.7, 1.2, 0]}>
+              <cylinderGeometry args={[0.04, 0.04, 2.4, 6]} />
+              <meshStandardMaterial color="#f8fafc" />
+            </mesh>
+            {/* Umbrella Top */}
+            <mesh position={[0.7, 2.4, 0]}>
+              <coneGeometry args={[1.1, 0.5, 6]} />
+              <meshStandardMaterial color={bl.color} roughness={0.6} flatShading />
+            </mesh>
+          </group>
+        ))}
+
+        {/* Palm Trees */}
         {palms.map((p, idx) => (
-          <PalmTree key={idx} x={p.x} z={p.z} scale={p.scale} />
+          <group key={idx} position={[p.x, 0, p.z]} scale={[p.scale, p.scale, p.scale]}>
+            <mesh position={[0, 2.5, 0]}>
+              <cylinderGeometry args={[0.15, 0.25, 5, 8]} />
+              <meshStandardMaterial color="#78350f" roughness={0.9} />
+            </mesh>
+            <mesh position={[0, 5, 0]} rotation={[0, 0, 0.2]}>
+              <coneGeometry args={[1.5, 1, 5]} />
+              <meshStandardMaterial color="#166534" roughness={0.7} />
+            </mesh>
+            <mesh position={[0, 4.8, 0]} rotation={[0.2, 2, -0.1]}>
+              <coneGeometry args={[1.6, 0.8, 5]} />
+              <meshStandardMaterial color="#15803d" roughness={0.7} />
+            </mesh>
+          </group>
         ))}
       </group>
     );
@@ -1662,22 +1792,62 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: SceneryTheme }> = ({ scenery
   if (sceneryTheme === 'mountain') {
     return (
       <group>
-        <CloudLayer count={10} color="#f8fafc" height={42} />
+        {/* Snowy Horizon Mountains */}
         {mountains.map((m, idx) => (
           <group key={idx} position={[m.x, 0, m.z]}>
-            <mesh position={[0, m.height / 2, 0]} castShadow>
-              <coneGeometry args={[m.radius, m.height, 7]} />
-              <meshStandardMaterial color="#475569" roughness={0.95} flatShading />
+            <mesh position={[0, m.height / 2, 0]}>
+              <coneGeometry args={[m.radius, m.height, 6]} />
+              <meshStandardMaterial color="#475569" roughness={0.9} flatShading />
             </mesh>
-            {/* Snow cap */}
-            <mesh position={[0, m.height * 0.78, 0]}>
-              <coneGeometry args={[m.radius * 0.35, m.height * 0.44, 7]} />
-              <meshStandardMaterial color="#f8fafc" roughness={0.7} flatShading />
+            <mesh position={[0, m.height * 0.8, 0]}>
+              <coneGeometry args={[m.radius * 0.3, m.height * 0.4, 6]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.8} />
             </mesh>
           </group>
         ))}
-        {forestTrees.slice(0, 35).map((t, idx) => (
-          <PineTree key={idx} x={t.x} z={t.z} scale={t.scale} snowy />
+
+        {/* Floating Clouds */}
+        {mountainClouds.map((cl, idx) => (
+          <group key={`cl-${idx}`} position={[cl.x, cl.y, cl.z]} scale={[cl.scale, cl.scale, cl.scale]}>
+            <mesh position={[0, 0, 0]}>
+              <sphereGeometry args={[1, 6, 6]} />
+              <meshStandardMaterial color="#f8fafc" opacity={0.8} transparent flatShading />
+            </mesh>
+            <mesh position={[0.7, -0.1, 0]} scale={[0.8, 0.8, 0.8]}>
+              <sphereGeometry args={[1, 6, 6]} />
+              <meshStandardMaterial color="#f8fafc" opacity={0.8} transparent flatShading />
+            </mesh>
+            <mesh position={[-0.7, -0.1, 0]} scale={[0.8, 0.8, 0.8]}>
+              <sphereGeometry args={[1, 6, 6]} />
+              <meshStandardMaterial color="#f8fafc" opacity={0.8} transparent flatShading />
+            </mesh>
+          </group>
+        ))}
+
+        {/* Scattered Rocks */}
+        {mountainRocks.map((rk, idx) => (
+          <mesh key={`rk-${idx}`} position={[rk.x, 0, rk.z]} scale={[rk.scale, rk.scale, rk.scale]} rotation={[0, rk.rotY, 0]}>
+            <sphereGeometry args={[1.5, 4, 4]} />
+            <meshStandardMaterial color="#64748b" roughness={0.9} flatShading />
+          </mesh>
+        ))}
+
+        {/* Pines */}
+        {forestTrees.slice(0, 30).map((t, idx) => (
+          <group key={idx} position={[t.x, 0, t.z]} scale={[t.scale, t.scale, t.scale]}>
+            <mesh position={[0, 0.8, 0]}>
+              <cylinderGeometry args={[0.1, 0.15, 1.6, 6]} />
+              <meshStandardMaterial color="#451a03" />
+            </mesh>
+            <mesh position={[0, 1.8, 0]}>
+              <coneGeometry args={[0.7, 1.4, 6]} />
+              <meshStandardMaterial color="#065f46" flatShading />
+            </mesh>
+            <mesh position={[0, 2.5, 0]}>
+              <coneGeometry args={[0.5, 1.1, 6]} />
+              <meshStandardMaterial color="#047857" flatShading />
+            </mesh>
+          </group>
         ))}
       </group>
     );
@@ -1686,9 +1856,51 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: SceneryTheme }> = ({ scenery
   if (sceneryTheme === 'forest') {
     return (
       <group>
-        <CloudLayer count={8} color="#e2e8f0" height={36} />
+        {/* Red spotted mushrooms */}
+        {forestMushrooms.map((m, idx) => (
+          <group key={`mu-${idx}`} position={[m.x, 0, m.z]} scale={[m.scale, m.scale, m.scale]}>
+            {/* Stem */}
+            <mesh position={[0, 0.5, 0]}>
+              <cylinderGeometry args={[0.12, 0.18, 1, 6]} />
+              <meshStandardMaterial color="#f8fafc" />
+            </mesh>
+            {/* Cap */}
+            <mesh position={[0, 1, 0]}>
+              <sphereGeometry args={[0.6, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+              <meshStandardMaterial color="#ef4444" roughness={0.3} />
+            </mesh>
+            {/* Little white speck */}
+            <mesh position={[0, 1.5, 0]} scale={[0.1, 0.1, 0.1]}>
+              <sphereGeometry args={[1, 4, 4]} />
+              <meshStandardMaterial color="#ffffff" />
+            </mesh>
+          </group>
+        ))}
+
+        {/* Fallen Logs */}
+        {forestLogs.map((log, idx) => (
+          <mesh key={`log-${idx}`} position={[log.x, 0.3, log.z]} rotation={[Math.PI / 2, log.rotY, 0]} scale={[log.scale, log.scale, log.scale]}>
+            <cylinderGeometry args={[0.25, 0.28, 2.5, 8]} />
+            <meshStandardMaterial color="#78350f" roughness={0.9} />
+          </mesh>
+        ))}
+
+        {/* Lots of green trees */}
         {forestTrees.map((t, idx) => (
-          <RoundTree key={idx} x={t.x} z={t.z} scale={t.scale} height={t.height} />
+          <group key={idx} position={[t.x, 0, t.z]} scale={[t.scale, t.scale, t.scale]}>
+            <mesh position={[0, t.height / 2, 0]}>
+              <cylinderGeometry args={[0.15, 0.22, t.height, 8]} />
+              <meshStandardMaterial color="#451a03" />
+            </mesh>
+            <mesh position={[0, t.height + 0.6, 0]}>
+              <sphereGeometry args={[1.1, 8, 8]} />
+              <meshStandardMaterial color="#166534" roughness={0.8} />
+            </mesh>
+            <mesh position={[0.4, t.height + 1.1, -0.2]} scale={[0.8, 0.8, 0.8]}>
+              <sphereGeometry args={[1.0, 8, 8]} />
+              <meshStandardMaterial color="#15803d" roughness={0.8} />
+            </mesh>
+          </group>
         ))}
       </group>
     );
@@ -1697,29 +1909,105 @@ const EnvironmentScenery: React.FC<{ sceneryTheme?: SceneryTheme }> = ({ scenery
   if (sceneryTheme === 'desert') {
     return (
       <group>
-        <CloudLayer count={6} color="#fef3c7" height={40} />
+        {/* Sandy dunes */}
         {desertDunes.map((d, idx) => (
-          <mesh key={idx} position={[d.x, -0.05, d.z]} scale={[d.rx, d.h, d.rz]} rotation={[0.1, idx * 0.4, 0]} receiveShadow>
-            <sphereGeometry args={[1, 18, 10]} />
+          <mesh key={idx} position={[d.x, -0.05, d.z]} scale={[d.rx, d.h, d.rz]} rotation={[0.1, Math.random(), 0]}>
+            <sphereGeometry args={[1, 16, 8]} />
             <meshStandardMaterial color="#eab308" roughness={1.0} flatShading />
           </mesh>
         ))}
-        {palms.slice(0, 10).map((p, idx) => (
-          <PalmTree key={idx} x={p.x} z={p.z} scale={p.scale * 0.85} />
+
+        {/* Red Monument Mesas in distance */}
+        {desertMesas.map((me, idx) => (
+          <mesh key={`me-${idx}`} position={[me.x, me.h / 2 - 0.2, me.z]}>
+            <boxGeometry args={[me.w, me.h, me.d]} />
+            <meshStandardMaterial color="#c2410c" roughness={0.9} flatShading />
+          </mesh>
         ))}
-        {forestTrees.slice(0, 14).map((t, idx) => (
-          <Cactus key={idx} x={t.x} z={t.z} scale={t.scale * 0.9} />
+
+        {/* Palm Trees / Cacti */}
+        {palms.slice(0, 12).map((p, idx) => (
+          <group key={idx} position={[p.x, 0, p.z]} scale={[p.scale * 0.8, p.scale * 0.8, p.scale * 0.8]}>
+            {/* Saguaro Cactus Base */}
+            <mesh position={[0, 1.8, 0]}>
+              <cylinderGeometry args={[0.22, 0.22, 3.6, 8]} />
+              <meshStandardMaterial color="#15803d" roughness={0.9} />
+            </mesh>
+            {/* Saguaro Cactus Arm 1 */}
+            <group position={[0, 1.8, 0]}>
+              <mesh position={[0.5, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.14, 0.14, 1.0, 8]} />
+                <meshStandardMaterial color="#15803d" />
+              </mesh>
+              <mesh position={[1.0, 1.1, 0]}>
+                <cylinderGeometry args={[0.14, 0.14, 1.4, 8]} />
+                <meshStandardMaterial color="#15803d" />
+              </mesh>
+            </group>
+            {/* Saguaro Cactus Arm 2 */}
+            <group position={[0, 1.0, 0]} rotation={[0, Math.PI, 0]}>
+              <mesh position={[0.5, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.14, 0.14, 1.0, 8]} />
+                <meshStandardMaterial color="#15803d" />
+              </mesh>
+              <mesh position={[1.0, 1.1, 0]}>
+                <cylinderGeometry args={[0.14, 0.14, 1.4, 8]} />
+                <meshStandardMaterial color="#15803d" />
+              </mesh>
+            </group>
+          </group>
         ))}
       </group>
     );
   }
 
-  // DEFAULT / CITY skyline
+  // DEFAULT/CITY Skyline & Infrastructure
   return (
     <group>
-      <CloudLayer count={10} color="#cbd5e1" height={45} />
+      {/* City Roads */}
+      {cityRoads.map((rd, idx) => (
+        <group key={`rd-${idx}`}>
+          <mesh position={[rd.x, 0.005, rd.z]}>
+            <boxGeometry args={[rd.w, 0.02, rd.d]} />
+            <meshStandardMaterial color="#1e293b" roughness={0.8} />
+          </mesh>
+          {/* Yellow dash in middle */}
+          <mesh position={[rd.x, 0.015, rd.z]}>
+            <boxGeometry args={[rd.w, 0.01, 0.15]} />
+            <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.2} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* City Cars */}
+      {cityCars.map((car, idx) => (
+        <group key={`car-${idx}`} position={[car.x, 0.25, car.z]} rotation={[0, car.rotY, 0]} scale={[car.scale, car.scale, car.scale]}>
+          <mesh>
+            <boxGeometry args={[1.6, 0.4, 0.8]} />
+            <meshStandardMaterial color={car.color} roughness={0.4} />
+          </mesh>
+          <mesh position={[-0.1, 0.3, 0]}>
+            <boxGeometry args={[0.9, 0.3, 0.7]} />
+            <meshStandardMaterial color="#0284c7" roughness={0.1} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Buildings Skyline */}
       {cityBuildings.map((b, idx) => (
-        <CityBuilding key={idx} x={b.x} z={b.z} width={b.width} height={b.height} depth={b.depth} color={b.color} />
+        <group key={idx} position={[b.x, b.height / 2 - 0.1, b.z]}>
+          <mesh>
+            <boxGeometry args={[b.width, b.height, b.depth]} />
+            <meshStandardMaterial color={b.color} roughness={0.3} metalness={0.1} />
+          </mesh>
+          {/* Red beacon warning light on tall skyscrapers */}
+          {b.height > 30 && (
+            <mesh position={[0, b.height / 2 + 0.5, 0]}>
+              <sphereGeometry args={[0.25, 4, 4]} />
+              <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={1} />
+            </mesh>
+          )}
+        </group>
       ))}
     </group>
   );
@@ -1890,7 +2178,7 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
   }, [joystickActive]);
 
   // Types that are merged visually
-  const mergedTypes = ['bed', 'table', 'reception', 'window', 'door', 'elevator', 'bathroom', 'staff', 'wall', 'floor'];
+  const mergedTypes = ['bed', 'bed_single', 'bed_double', 'table', 'reception', 'window', 'door', 'elevator', 'bathroom', 'staff', 'wall', 'floor'];
 
   return (
     <div className={`flex-1 bg-slate-950 w-full h-full relative overflow-hidden select-none touch-none`}>
@@ -1963,32 +2251,33 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
             maxPolarAngle={Math.PI / 2 - 0.05}
           />
         )}
-        {(() => {
-          const theme = SCENERY_THEMES[hotelLocation?.sceneryTheme || 'city'];
-          return (
-            <>
-              <Sky
-                sunPosition={theme.sky.sunPosition}
-                turbidity={theme.sky.turbidity}
-                rayleigh={theme.sky.rayleigh}
-              />
-              <ambientLight intensity={theme.ambient.intensity} color={theme.ambient.color} />
-              <directionalLight
-                position={[10, 20, 10]}
-                intensity={theme.directional.intensity}
-                castShadow
-                color={theme.directional.color}
-              />
-              <directionalLight position={[-10, 10, -10]} intensity={0.4} color={theme.ambient.color} />
-              <fog attach="fog" args={[theme.fog.color, theme.fog.near, theme.fog.far]} />
-              {/* Ground Plane */}
-              <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[500, 500]} />
-                <meshStandardMaterial color={theme.ground} roughness={0.95} />
-              </mesh>
-            </>
-          );
-        })()}
+        <Sky 
+          sunPosition={hotelLocation?.sceneryTheme === 'desert' ? [100, 5, 10] : [100, 20, 100]} 
+          turbidity={hotelLocation?.sceneryTheme === 'desert' ? 2.5 : 0.1} 
+          rayleigh={hotelLocation?.sceneryTheme === 'desert' ? 2.0 : 0.5} 
+        />
+        <ambientLight intensity={hotelLocation?.sceneryTheme === 'desert' ? 0.45 : 0.4} color={hotelLocation?.sceneryTheme === 'desert' ? '#ffedd5' : '#ffffff'} />
+        <directionalLight 
+          position={[10, 20, 10]} 
+          intensity={1.5} 
+          castShadow 
+          color={hotelLocation?.sceneryTheme === 'desert' ? '#f97316' : '#ffffff'}
+        />
+        <directionalLight position={[-10, 10, -10]} intensity={0.5} />
+        
+        {/* Ground Plane */}
+        <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[500, 500]} />
+          <meshStandardMaterial 
+            color={
+              hotelLocation?.sceneryTheme === 'beach' ? '#ca8a04' :
+              hotelLocation?.sceneryTheme === 'mountain' ? '#15803d' :
+              hotelLocation?.sceneryTheme === 'forest' ? '#14532d' :
+              hotelLocation?.sceneryTheme === 'desert' ? '#eab308' :
+              '#0f172a'
+            } 
+          />
+        </mesh>
 
         <EnvironmentScenery sceneryTheme={hotelLocation?.sceneryTheme} />
 
@@ -2008,16 +2297,21 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
             const isVisible = mode !== 'Walk' || Math.abs(floorIndex - activeFloorIndex) <= 1;
             if (!isVisible) return null;
 
-            const bedBlocks = getMergedBlocks(floor.grid, 'bed');
-            const tableBlocks = getMergedBlocks(floor.grid, 'table');
-            const receptionBlocks = getMergedBlocks(floor.grid, 'reception');
-            const windowBlocks = getMergedBlocks(floor.grid, 'window');
-            const doorBlocks = getMergedBlocks(floor.grid, 'door');
-            const elevatorBlocks = getMergedBlocks(floor.grid, 'elevator');
-            const bathroomBlocks = getMergedBlocks(floor.grid, 'bathroom');
-            const staffBlocks = getMergedBlocks(floor.grid, 'staff');
-            const wallBlocks = getMergedBlocks(floor.grid, 'wall');
-            const floorBlocks = getMergedBlocks(floor.grid, 'floor');
+            const normalizedGrid = floor.grid.map(row => row.map(tile => {
+              if (tile === 'bed_single' || tile === 'bed_double') return 'bed';
+              return tile;
+            }));
+
+            const bedBlocks = getMergedBlocks(normalizedGrid, 'bed', floor.rotations);
+            const tableBlocks = getMergedBlocks(normalizedGrid, 'table', floor.rotations);
+            const receptionBlocks = getMergedBlocks(normalizedGrid, 'reception', floor.rotations);
+            const windowBlocks = getMergedBlocks(normalizedGrid, 'window', floor.rotations);
+            const doorBlocks = getMergedBlocks(normalizedGrid, 'door', floor.rotations);
+            const elevatorBlocks = getMergedBlocks(normalizedGrid, 'elevator');
+            const bathroomBlocks = getMergedBlocks(normalizedGrid, 'bathroom', floor.rotations);
+            const staffBlocks = getMergedBlocks(normalizedGrid, 'staff', floor.rotations);
+            const wallBlocks = getMergedBlocks(normalizedGrid, 'wall');
+            const floorBlocks = getMergedBlocks(normalizedGrid, 'floor');
 
             return (
               <group key={floor.level} position={[0, floorIndex * WALL_HEIGHT, 0]}>
@@ -2037,11 +2331,11 @@ export const Viewer3D: React.FC<{ mode?: string }> = ({ mode = '3D' }) => {
                 {/* Render merged blocks */}
                 {wallBlocks.map((b, i) => <MergedWall key={`wall-${i}`} {...b} />)}
                 {floorBlocks.map((b, i) => <MergedFloor key={`floor-${i}`} {...b} />)}
-                {bedBlocks.map((b, i) => <MergedBed key={`bed-${i}`} {...b} grid={floor.grid} />)}
+                {bedBlocks.map((b, i) => <MergedBed key={`bed-${i}`} {...b} grid={normalizedGrid} />)}
                 {tableBlocks.map((b, i) => <MergedTable key={`table-${i}`} {...b} />)}
                 {receptionBlocks.map((b, i) => <MergedReception key={`rec-${i}`} {...b} />)}
-                {windowBlocks.map((b, i) => <MergedWindow key={`win-${i}`} {...b} grid={floor.grid} />)}
-                {doorBlocks.map((b, i) => <MergedDoor key={`door-${i}`} {...b} grid={floor.grid} />)}
+                {windowBlocks.map((b, i) => <MergedWindow key={`win-${i}`} {...b} grid={normalizedGrid} />)}
+                {doorBlocks.map((b, i) => <MergedDoor key={`door-${i}`} {...b} grid={normalizedGrid} />)}
                 {elevatorBlocks.map((b, i) => <MergedElevator key={`ele-${i}`} {...b} floorLevel={floor.level} floorIndex={floorIndex} />)}
                 {bathroomBlocks.map((b, i) => <MergedBathroom key={`bath-${i}`} {...b} />)}
                 {staffBlocks.map((b, i) => <MergedStaff key={`staff-${i}`} {...b} />)}

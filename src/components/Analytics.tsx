@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useHotelStore } from '../store';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Users, DollarSign, Activity, Crown, CircleCheck as CheckCircle2, Trophy, Sparkles, Layers, Briefcase, Share2, Check } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Activity, Crown, CheckCircle2, Trophy, Sparkles, Layers, Briefcase, Share2, Check } from 'lucide-react';
 
 const getMilestoneIcon = (type: string) => {
   switch (type) {
@@ -126,15 +126,16 @@ Built and managed with ArchHotel Suite!`;
   const unlockedCount = useMemo(() => milestones.filter(m => m.unlocked).length, [milestones]);
 
   const totalBeds = useMemo(() => {
-    let count = 0;
+    let capacity = 0;
     floors.forEach(f => {
       f.grid.forEach(row => {
         row.forEach(cell => {
-          if (cell === 'bed') count++;
+          if (cell === 'bed' || cell === 'bed_double') capacity += 2;
+          if (cell === 'bed_single') capacity += 1;
         });
       });
     });
-    return count * 2; // Assuming 2 capacity per bed based on store logic
+    return capacity;
   }, [floors]);
 
   const occupancyRate = totalBeds > 0 ? (guests.length / totalBeds) * 100 : 0;
@@ -190,7 +191,7 @@ Built and managed with ArchHotel Suite!`;
   const COLORS = ['#10b981', '#1e293b'];
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0a0e14] p-6 sm:p-8 text-slate-100">
+    <div className="flex-1 overflow-y-auto bg-slate-950 p-6 sm:p-8 text-slate-100">
       <div className="max-w-6xl mx-auto space-y-6">
         <div>
           <h2 className="text-2xl font-black text-white">Analytics Overview</h2>

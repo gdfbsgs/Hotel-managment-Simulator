@@ -235,21 +235,21 @@ export function Onboarding() {
   const customIcons = ['🌟', '🏨', '🏰', '🔮', '🍸', '🌊', '🌴', '🐆', '💎', '🎨'];
 
   return (
-    <div className="fixed inset-0 bg-[#0a0e14]/95 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto font-sans text-slate-100 animate-in fade-in duration-300">
-      <div className="relative w-full max-w-2xl bg-[#0f1620] border border-[#1c2638] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto font-sans text-slate-100 animate-in fade-in duration-300">
+      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Progress Bar */}
-        <div className="h-1.5 w-full bg-[#0a0e14] flex">
-          <div className={`h-full bg-[#1fa87c] transition-all duration-300 ${
+        <div className="h-1.5 w-full bg-slate-950 flex">
+          <div className={`h-full bg-amber-500 transition-all duration-300 ${
             step === 1 ? 'w-1/3' : step === 2 ? 'w-2/3' : 'w-full'
           }`} />
         </div>
 
         {/* Header */}
-        <div className="p-6 border-b border-[#1c2638] flex items-center justify-between shrink-0 bg-[#0a0e14]/50">
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-950/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#1fa87c] to-[#0f6650] rounded-xl flex items-center justify-center shadow-lg shadow-[#1fa87c]/20 ring-1 ring-[#43c397]/30">
-              <Compass className="text-white w-5 h-5 animate-spin-slow" />
+            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/10">
+              <Compass className="text-slate-950 w-5 h-5 animate-spin-slow" />
             </div>
             <div>
               <h2 className="text-lg font-black text-white leading-none">ArchHotel Suite</h2>
@@ -603,7 +603,7 @@ export function Onboarding() {
           
           <button
             onClick={step < 3 ? handleNext : handleComplete}
-            className="bg-[#fbbf24] hover:bg-[#d97706] text-[#0a0e14] px-5 py-2.5 rounded-xl text-xs font-black tracking-wide flex items-center gap-1 shadow-lg shadow-[#fbbf24]/10 cursor-pointer border border-[#fbbf24]/35 transition-all"
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black tracking-wide flex items-center gap-1 shadow-lg shadow-amber-500/10 cursor-pointer border border-amber-400/35 transition-all"
           >
             <span>{step === 3 ? 'Launch Hotel Empire!' : 'Continue'}</span>
             {step < 3 ? <ChevronRight size={14} /> : <Check size={14} />}

@@ -161,16 +161,16 @@ Built and managed with ArchHotel Suite!`;
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#0a0e14] text-slate-100 font-sans overflow-hidden pb-16 sm:pb-0">
-      <nav className="h-16 bg-[#0f1620]/80 backdrop-blur-xl border-b border-[#1c2638] flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-xl z-20">
+    <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-100 font-sans overflow-hidden pb-16 sm:pb-0">
+      <nav className="h-16 bg-slate-900/40 backdrop-blur-md border-b border-slate-900/80 flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-2xl z-20">
         <div className="flex items-center gap-4 sm:gap-8">
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#1fa87c] to-[#0f6650] rounded-xl flex items-center justify-center shadow-lg shadow-[#1fa87c]/20 shrink-0 ring-1 ring-[#43c397]/30">
-              <span className="text-white font-black text-base">{activeBrand.icon}</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/10 shrink-0">
+              <span className="text-slate-950 font-black text-base">{activeBrand.icon}</span>
             </div>
             <div className="flex flex-col">
               <span className="font-extrabold tracking-tight text-white leading-none text-xs sm:text-sm font-display">
-                {activeHotel.name} <span className="text-[10px] sm:text-xs font-semibold text-[#43c397] block sm:inline mt-0.5 sm:mt-0 sm:ml-1.5 font-mono uppercase">[{activeBrand.name}]</span>
+                {activeHotel.name} <span className="text-[10px] sm:text-xs font-semibold text-amber-500 block sm:inline mt-0.5 sm:mt-0 sm:ml-1.5 font-mono uppercase">[{activeBrand.name}]</span>
               </span>
               {/* Stars display */}
               <div className="flex items-center gap-0.5 mt-1">
@@ -181,7 +181,7 @@ Built and managed with ArchHotel Suite!`;
                     <Star 
                       key={i} 
                       size={10} 
-                      className={`${isFilled ? 'text-[#fbbf24] fill-[#fbbf24]' : 'text-[#1c2638]'}`} 
+                      className={`${isFilled ? 'text-amber-400 fill-amber-400 animate-pulse' : 'text-slate-800'}`} 
                     />
                   );
                 })}
@@ -189,36 +189,35 @@ Built and managed with ArchHotel Suite!`;
               </div>
             </div>
           </div>
-          <div className="flex gap-1 text-[11px] font-bold uppercase tracking-wider hidden sm:flex font-display p-0.5 bg-[#0a0e14] rounded-xl border border-[#1c2638]">
-            <button 
+          <div className="flex gap-6 text-[11px] font-bold uppercase tracking-wider hidden sm:flex font-display">
+            <span 
               onClick={() => setAppMode('Design')}
-              className={`cursor-pointer transition-all duration-200 px-3.5 py-1.5 rounded-lg ${appMode === 'Design' ? 'bg-[#1fa87c] text-white font-extrabold shadow-sm shadow-[#1fa87c]/20' : 'text-slate-400 hover:text-white hover:bg-[#151d2b]'}
-              `}>
+              className={`cursor-pointer transition-all duration-200 ${appMode === 'Design' ? 'text-amber-400 border-b-2 border-amber-500 pb-2 mt-1 font-extrabold' : 'text-slate-400 hover:text-white mt-1'}`}>
               Design
-            </button>
-            <button 
+            </span>
+            <span 
               onClick={() => setAppMode('Management')}
-              className={`cursor-pointer transition-all duration-200 px-3.5 py-1.5 rounded-lg ${appMode === 'Management' ? 'bg-[#1fa87c] text-white font-extrabold shadow-sm shadow-[#1fa87c]/20' : 'text-slate-400 hover:text-white hover:bg-[#151d2b]'}`}>
+              className={`cursor-pointer transition-all duration-200 ${appMode === 'Management' ? 'text-amber-400 border-b-2 border-amber-500 pb-2 mt-1 font-extrabold' : 'text-slate-400 hover:text-white mt-1'}`}>
               Management
-            </button>
-            <button 
+            </span>
+            <span 
               onClick={() => setAppMode('Analytics')}
-              className={`cursor-pointer transition-all duration-200 px-3.5 py-1.5 rounded-lg ${appMode === 'Analytics' ? 'bg-[#1fa87c] text-white font-extrabold shadow-sm shadow-[#1fa87c]/20' : 'text-slate-400 hover:text-white hover:bg-[#151d2b]'}`}>
+              className={`cursor-pointer transition-all duration-200 ${appMode === 'Analytics' ? 'text-amber-400 border-b-2 border-amber-500 pb-2 mt-1 font-extrabold' : 'text-slate-400 hover:text-white mt-1'}`}>
               Analytics
-            </button>
+            </span>
           </div>
         </div>
         
         <div className="flex items-center gap-2 sm:gap-3">
           <AnimatedMoney money={money} />
           {appMode === 'Design' && (
-            <div className="flex items-center gap-1 p-0.5 bg-[#0a0e14] rounded-xl border border-[#1c2638] shadow-inner scale-90 sm:scale-100">
+            <div className="flex items-center gap-1 p-0.5 bg-slate-950 rounded-xl border border-slate-900 shadow-inner scale-90 sm:scale-100">
               <button
                 onClick={() => setViewMode('2D')}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all uppercase tracking-wide cursor-pointer ${
                   viewMode === '2D' 
-                    ? 'bg-[#fbbf24] text-[#0a0e14] shadow-sm' 
-                    : 'text-slate-400 hover:text-white hover:bg-[#151d2b]'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm border border-amber-400/30' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
                 }`}
               >
                 2D
@@ -227,8 +226,8 @@ Built and managed with ArchHotel Suite!`;
                 onClick={() => setViewMode('3D')}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all uppercase tracking-wide cursor-pointer ${
                   viewMode === '3D' 
-                    ? 'bg-[#fbbf24] text-[#0a0e14] shadow-sm' 
-                    : 'text-slate-400 hover:text-white hover:bg-[#151d2b]'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm border border-amber-400/30' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
                 }`}
               >
                 3D
@@ -237,8 +236,8 @@ Built and managed with ArchHotel Suite!`;
                 onClick={() => setViewMode('Walk')}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all uppercase tracking-wide cursor-pointer ${
                   viewMode === 'Walk' 
-                    ? 'bg-[#fbbf24] text-[#0a0e14] shadow-sm' 
-                    : 'text-slate-400 hover:text-white hover:bg-[#151d2b]'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm border border-amber-400/30 shadow-amber-500/5' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
                 }`}
               >
                 Walk
@@ -248,20 +247,20 @@ Built and managed with ArchHotel Suite!`;
 
           {/* Realism & Engine Quality Settings Control */}
           <div className="relative group/settings z-30">
-            <button className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-[#0a0e14] hover:bg-[#151d2b] text-slate-300 border border-[#1c2638] rounded-xl transition-colors cursor-pointer font-bold select-none">
-              <Sparkles size={13} className="text-[#fbbf24] animate-pulse" />
+            <button className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-slate-950 hover:bg-slate-900 text-slate-300 border border-slate-900 rounded-xl transition-colors cursor-pointer font-bold select-none">
+              <Sparkles size={13} className="text-amber-500 animate-pulse" />
               <span className="hidden md:inline font-display">Simulation Quality</span>
               <span className="md:hidden">Settings</span>
             </button>
             
             {/* Hover dropdown */}
-            <div className="absolute right-0 top-full mt-1.5 hidden group-hover/settings:block bg-[#0f1620] border-2 border-[#1c2638] shadow-2xl rounded-2xl p-4 min-w-[240px] text-left animate-in fade-in slide-in-from-top-1 duration-150">
-              <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3 border-b border-[#1c2638] pb-1.5 font-display">SIMULATION ENGINE</h4>
+            <div className="absolute right-0 top-full mt-1.5 hidden group-hover/settings:block bg-slate-900 border-2 border-slate-800 shadow-2xl rounded-2xl p-4 min-w-[240px] text-left animate-in fade-in slide-in-from-top-1 duration-150">
+              <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3 border-b border-slate-800 pb-1.5 font-display">SIMULATION ENGINE</h4>
               
               {/* Graphics Quality */}
               <div className="flex flex-col gap-1.5 mb-4">
                 <label className="text-[10px] font-bold text-slate-400 uppercase font-mono">Render Quality</label>
-                <div className="grid grid-cols-4 gap-1 p-0.5 bg-[#0a0e14] rounded-xl border border-[#1c2638]">
+                <div className="grid grid-cols-4 gap-1 p-0.5 bg-slate-950 rounded-xl border border-slate-800">
                   {(['low', 'medium', 'high', 'ultra'] as const).map((q) => {
                     const active = graphicsQuality === q;
                     return (
@@ -270,7 +269,7 @@ Built and managed with ArchHotel Suite!`;
                         onClick={() => setGraphicsQuality(q)}
                         className={`py-1 text-[9px] font-black rounded-lg capitalize transition-all cursor-pointer ${
                           active 
-                            ? 'bg-[#1fa87c] text-white font-extrabold' 
+                            ? 'bg-amber-500 text-slate-950 font-extrabold' 
                             : 'text-slate-500 hover:text-slate-300'
                         }`}
                       >
@@ -282,14 +281,14 @@ Built and managed with ArchHotel Suite!`;
               </div>
 
               {/* Spectator Mode */}
-              <div className="flex items-center justify-between pt-2 border-t border-[#1c2638]">
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-bold text-slate-300 uppercase font-display">Spectator Mode</span>
                   <span className="text-[8px] text-slate-500 font-mono">Noclip Flight Mode</span>
                 </div>
                 <button
                   onClick={() => setSpectatorMode(!spectatorMode)}
-                  className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${spectatorMode ? 'bg-[#1fa87c]' : 'bg-[#1c2638]'}`}
+                  className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${spectatorMode ? 'bg-amber-500' : 'bg-slate-800'}`}
                 >
                   <div className={`bg-white w-5 h-5 rounded-full shadow-md transition-transform ${spectatorMode ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
@@ -297,26 +296,26 @@ Built and managed with ArchHotel Suite!`;
             </div>
           </div>
 
-          <div className="w-px h-6 bg-[#1c2638] mx-1 hidden sm:block"></div>
+          <div className="w-px h-6 bg-slate-850 mx-1 hidden sm:block"></div>
           {user ? (
             <>
-              <button onClick={saveToCloud} className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-[#1fa87c] hover:bg-[#128565] text-white rounded-xl font-bold shadow-md transition-colors hidden sm:flex cursor-pointer">
+              <button onClick={saveToCloud} className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-emerald-650 text-white rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-colors hidden sm:flex cursor-pointer">
                 <Save size={14} /> Save
               </button>
               <div className="relative group">
-                <div className="w-9 h-9 rounded-full bg-[#151d2b] border border-[#1c2638] flex items-center justify-center overflow-hidden cursor-pointer">
+                <div className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden cursor-pointer">
                   {user.photoURL ? <img src={user.photoURL} alt="User" /> : <UserIcon size={16} className="text-slate-300" />}
                 </div>
-                <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block bg-[#0f1620] border border-[#1c2638] shadow-2xl rounded-xl py-1 z-50 min-w-[140px] overflow-hidden">
-                  <div className="px-3 py-2 text-xs text-slate-400 border-b border-[#1c2638] truncate">{user.email}</div>
-                  <button onClick={logout} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-[#151d2b] flex items-center gap-2 cursor-pointer">
+                <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block bg-slate-900 border border-slate-800 shadow-2xl rounded-xl py-1 z-50 min-w-[140px] overflow-hidden">
+                  <div className="px-3 py-2 text-xs text-slate-400 border-b border-slate-850 truncate">{user.email}</div>
+                  <button onClick={logout} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-slate-850 flex items-center gap-2 cursor-pointer">
                     <LogOut size={14} /> Sign out
                   </button>
                 </div>
               </div>
             </>
           ) : (
-            <button onClick={login} className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-[#fbbf24] hover:bg-[#d97706] text-[#0a0e14] rounded-xl font-extrabold shadow-lg shadow-[#fbbf24]/10 transition-colors cursor-pointer select-none">
+            <button onClick={login} className="flex items-center gap-1.5 px-3.5 py-2 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-extrabold shadow-lg shadow-amber-500/10 transition-colors cursor-pointer select-none">
               <LogIn size={14} /> Sign In
             </button>
           )}
@@ -333,8 +332,8 @@ Built and managed with ArchHotel Suite!`;
 
             {/* Mobile Sidebar Overlay */}
             {viewMode === '2D' && mobileSidebarOpen && (
-              <div className="md:hidden fixed inset-y-16 right-0 w-64 bg-[#0f1620] border-l border-[#1c2638] z-30 shadow-2xl overflow-y-auto">
-                <div className="p-2.5 border-b border-[#1c2638] flex justify-between items-center bg-[#0a0e14]">
+              <div className="md:hidden fixed inset-y-16 right-0 w-64 bg-slate-900 border-l border-slate-800 z-30 shadow-2xl overflow-y-auto">
+                <div className="p-2.5 border-b border-slate-850 flex justify-between items-center bg-slate-950">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Toolbox & Floors</span>
                   <button onClick={() => setMobileSidebarOpen(false)} className="p-1.5 text-slate-400 hover:text-white cursor-pointer">
                     <X size={16} />
@@ -348,14 +347,14 @@ Built and managed with ArchHotel Suite!`;
             {viewMode === '2D' && (
               <button
                 onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-                className="md:hidden fixed bottom-20 right-4 z-30 bg-[#fbbf24] text-[#0a0e14] px-4 py-2.5 rounded-full shadow-2xl font-black flex items-center gap-1.5 border border-[#fbbf24] text-xs uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                className="md:hidden fixed bottom-20 right-4 z-30 bg-amber-500 text-slate-950 px-4 py-2.5 rounded-full shadow-2xl font-black flex items-center gap-1.5 border border-amber-400 text-xs uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
               >
                 {mobileSidebarOpen ? <X size={14} /> : <Layers size={14} />}
                 <span>{mobileSidebarOpen ? 'Close Tools' : 'Tools & Floors'}</span>
               </button>
             )}
 
-            <main className="flex-1 flex flex-col relative overflow-hidden bg-[#0a0e14]">
+            <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-950">
               {viewMode === '2D' ? <Editor2D /> : <Viewer3D mode={viewMode} />}
             </main>
           </>
@@ -365,11 +364,11 @@ Built and managed with ArchHotel Suite!`;
       </div>
       
       {/* Mobile Bottom Navigation Bar (Visible only on screens < sm) */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0f1620] border-t border-[#1c2638] z-30 flex items-center justify-around px-2 shadow-xl shrink-0">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900 border-t border-slate-850 z-30 flex items-center justify-around px-2 shadow-xl shrink-0">
         <button
           onClick={() => setAppMode('Design')}
           className={`flex flex-col items-center justify-center w-20 h-full transition-all ${
-            appMode === 'Design' ? 'text-[#1fa87c] font-extrabold scale-105' : 'text-slate-400 hover:text-white'
+            appMode === 'Design' ? 'text-amber-400 font-extrabold scale-105' : 'text-slate-400 hover:text-white'
           }`}
         >
           <Layers size={18} />
@@ -379,7 +378,7 @@ Built and managed with ArchHotel Suite!`;
         <button
           onClick={() => setAppMode('Management')}
           className={`flex flex-col items-center justify-center w-20 h-full transition-all ${
-            appMode === 'Management' ? 'text-[#1fa87c] font-extrabold scale-105' : 'text-slate-400 hover:text-white'
+            appMode === 'Management' ? 'text-amber-400 font-extrabold scale-105' : 'text-slate-400 hover:text-white'
           }`}
         >
           <Building2 size={18} />
@@ -389,7 +388,7 @@ Built and managed with ArchHotel Suite!`;
         <button
           onClick={() => setAppMode('Analytics')}
           className={`flex flex-col items-center justify-center w-20 h-full transition-all ${
-            appMode === 'Analytics' ? 'text-[#1fa87c] font-extrabold scale-105' : 'text-slate-400 hover:text-white'
+            appMode === 'Analytics' ? 'text-amber-400 font-extrabold scale-105' : 'text-slate-400 hover:text-white'
           }`}
         >
           <TrendingUp size={18} />
@@ -397,13 +396,13 @@ Built and managed with ArchHotel Suite!`;
         </button>
       </div>
 
-      <footer className="h-7 bg-[#0a0e14] border-t border-[#1c2638] px-4 flex items-center justify-between text-[10px] text-slate-400 shrink-0 font-medium z-20 relative hidden sm:flex">
+      <footer className="h-7 bg-slate-950 border-t border-slate-900 px-4 flex items-center justify-between text-[10px] text-slate-400 shrink-0 font-medium z-20 relative hidden sm:flex">
         <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#1fa87c] animate-pulse"></span> Engine Active</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Engine Active</span>
           <span>Grid: 0.50m</span>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-[#fbbf24] cursor-pointer">Auto-saved to Cloud</span>
+          <span className="text-amber-500 cursor-pointer">Auto-saved to Cloud</span>
         </div>
       </footer>
 
